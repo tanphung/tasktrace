@@ -1,5 +1,9 @@
 # TaskTrace — Review thiết kế và điểm còn mở v0.2
 
+## Review addendum v0.3 — 06/09/2026, trước thay contract
+
+Đã đọc và tự rà soát bốn addenda v0.3: thay đổi giới hạn ở prompt scaffolding và tối đa một lần regenerate cho output không qua parser. Không thay economics, provenance, đầy đủ artifact hoặc tiêu chí validator. Không dùng candidate lỗi làm instruction; chỉ diagnostic do code tạo. Không tự điền quotes/status. R01–R06 phải qua trước chạy lại live StudioNet. Rủi ro còn lại: AI vẫn có thể sai hoặc không đồng thuận, chi phí derive tăng; cần bằng chứng thực tế. Đây là self-review của trợ lý, không phải review độc lập/team approval. Bradbury gate giữ nguyên.
+
 Ngày 05/09/2026. Người rà soát: trợ lý lập kế hoạch. Đây là tự rà soát, chưa phải audit độc lập hoặc duyệt của GenLayer.
 
 ## Quyết định đã chỉnh

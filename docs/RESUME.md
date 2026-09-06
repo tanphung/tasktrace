@@ -1,4 +1,23 @@
-# Mốc tiếp tục TaskTrace — 05/09/2026
+# Mốc tiếp tục TaskTrace — cập nhật 06/09/2026
+
+## Mốc mới nhất — đọc phần này trước lịch sử bên dưới
+
+Người dùng đã yêu cầu tiếp tục xây dựng. Repo public đã có tại https://github.com/tanphung/tasktrace, baseline trước phiên này là `ca63b99`. Không còn ở trạng thái tạm dừng ngày 05/09.
+
+- Contract sửa định dạng prompt và cho phép đúng một lần tạo lại output sai schema; không reroll verdict hợp lệ, không bỏ kiểm tra citation hay validator độc lập. Bốn tài liệu thiết kế đã có addendum trước sửa code.
+- GenVM lint đạt; 81 direct/adversarial tests đạt (mock LLM). `npm test`: 50 frontend + 2 receipt tests đạt. TypeScript/Vite build đạt, còn cảnh báo bundle 755 kB.
+- Studio contract hiện tại: `0x7df6bD92CEe3c7ABfD2CBc0c14B64f7dce8E7f72`, source SHA-256 `d7b95848879652f94acfedf5e384504cb49dfea836f33c533999470dba7856b0`. Frontend deployment config khớp địa chỉ này.
+- Ba ca đầu `a-fault-1`, `b-fault-1`, `no-fault-1` đã FINALIZED, execution thành công, state RESOLVED và credits đúng. Xem manifest và `*.job.json` trong reports/studionet.
+- Lần lặp `a-fault-2-d7b95848` thất bại UNDETERMINED sau 3 rotations; hash `0x0ef382211f5e821486fcdcec6050e1fe1d5a663510594dbb7ef83925aa7cc070`. Batch dừng tại đây, các lượt còn lại chưa chạy. KHÔNG được báo đạt stability gate.
+- Công cụ read-only `node scripts/summarize-consensus.mjs reports/studionet/a-fault-2-d7b95848-resolve.receipt.json` giải mã candidate các vòng: vòng đầu A_COVERAGE/B_COVERAGE VIOLATED vì thiếu nội dung approval; các vòng sau SATISFIED vì diễn giải “immediately” hoặc bỏ sót topic approval. Đây là bằng chứng rubric/diễn giải chưa ổn định, không chứng minh được chính xác nhánh reject của từng validator.
+- Hướng điều tra tiếp: làm rõ coverage và nghĩa vụ B đã chấp nhận, giữ ambiguity fixture như stress test; không đổi fixture để che thất bại. Nếu sửa contract, rà soát bốn tài liệu trước, thêm regression, deploy Studio mới và giữ toàn bộ lịch sử. Không nới xác minh để ép đồng thuận.
+- Frontend có tạo job, role actions, evidence/citations toàn văn, deadline, credits, claim-warning, lưu hash chống gửi trùng, khôi phục hash không ký lại, và kiểm tra receipt + state trước báo thành công. Có WebMCP read-only và mở form không tự ký. Chưa có standalone worker agent.
+- Browser đã kiểm tra live a-fault/b-fault, citation navigation, mobile 390px không tràn ngang, lỗi không có wallet và hai WebMCP tools. Chưa kiểm tra positive E2E bằng ví trình duyệt. Wallet event subscriptions còn cần bổ sung; mỗi write đã kiểm tra lại account/chain.
+- Chưa gửi Bradbury, chưa xác minh recipient payout, chưa public website/nộp bài. Vẫn phải qua gate trong AGENTS và xin xác nhận sau khi người dùng xem kết quả.
+- Lịch sử deployment lỗi ngày 05/09 được giữ tại `reports/archive/studionet-20260905-4606d038`.
+- Lần đầu gửi a-fault-1 resolve gặp lỗi RPC `eth_gasPrice` trả HTML trước khi broadcast; kiểm tra SDK xác nhận bước này trước ký/gửi, sau đó mới thử lại. Không áp dụng cách này cho lỗi kết quả gửi không rõ.
+
+## Lịch sử checkpoint 05/09 — thông tin dưới đây đã được thay thế khi khác phần trên
 
 Người dùng yêu cầu lưu commit và push GitHub, sau đó tạm dừng để ngày mai tiếp tục. Không tự triển khai Bradbury hoặc nộp bài trong bước sao lưu này.
 

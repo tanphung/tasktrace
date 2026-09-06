@@ -25,24 +25,24 @@ Credits and emitted payment messages are **not** proof of a completed recipient 
 ## What exists at this checkpoint
 
 - A pinned-runner Python Intelligent Contract with authorization, immutable handoffs, bounded full-text evidence, custom validator checks, deterministic credits, deadlines, and claims.
-- 56 passing direct/adversarial tests, using controlled LLM mocks; these do not prove live AI accuracy.
-- Two passing receipt-decoder unit tests (`npm test`); these are not live network integration tests.
-- A real StudioNet deployment with schema/config checks and successful transaction receipts up to the first review request.
-- An initial read-only React workspace. Wallet actions, job creation, complete review rendering, agent execution, and browser E2E tests are unfinished.
+- 81 passing direct/adversarial tests, using controlled LLM mocks; these do not prove live AI accuracy.
+- 50 passing frontend tests and two receipt-decoder unit tests (`npm test`); these are not live network integration tests.
+- A real StudioNet deployment with schema/config checks and three first-pass core adjudications, verified against finalized receipts and resulting credits.
+- A React workspace with wallet actions, job creation, complete evidence/citations, role restrictions, deadlines, and persistent transaction tracking. Desktop/mobile read flows were checked in a browser; positive browser-wallet signing and automated agent execution remain unverified/unimplemented respectively.
 - TypeScript/Vite production build passes; bundle-size warning remains. The checkpoint dependency audit reports zero known npm vulnerabilities (not a security audit).
 - Design/security documents, eight prepared test fixtures, a resumable StudioNet runner, and preserved raw receipts including the failed run.
 
-**Known blocker:** the first live AI review ended `UNDETERMINED`. Its final leader receipt reports `[LLM_ERROR] Missing source/deliverable citation`. No live adjudication case has passed end-to-end yet. The strict citation checks must remain in place while response reliability is improved.
+**Known blocker:** three core cases passed once, but the second A-fault repetition ended `UNDETERMINED` after three leader rotations. Historical leader candidates disagree about whether “immediately” covers the requested approval topic. The exact rejection branch inside each validator is not exposed by these receipts. Reliability is not proven. Strict citations and independent verification remain enabled; all failures are preserved, including the earlier malformed-citation run.
 
 No Bradbury transaction or verified recipient payout has been performed. No public website has been deployed. A static hosting project is reserved; it is not a live demo.
 
 ## StudioNet evidence
 
 - Chain: `61999` (StudioNet only).
-- Contract: `0xebF38AD46a3C3D4728D84E0BF3EBD842Edab4802`.
-- Deployment transaction: `0x8cf6c780629d4c08ee90fd279e477bdfa0010cb519d78ccfd83aa290353c371b`.
-- Failed review transaction: `0x5884c07f6a95eb891e9f3857c420f5632ec2bcaf3548fbc3984fa51f512db0ec`.
-- Deployed source SHA-256: `4606d0387360f0b4c0613a8188221def59225cdc0155e2b502af1b0dc2633f5c`.
+- Contract: `0x7df6bD92CEe3c7ABfD2CBc0c14B64f7dce8E7f72`.
+- Deployment transaction: `0xc4cd6a4c06b012c76b1da0cb35f62e2c26f44fd0ef62b06e1c4db8b81a298f6d`.
+- Failed repeat review transaction: `0x0ef382211f5e821486fcdcec6050e1fe1d5a663510594dbb7ef83925aa7cc070`.
+- Deployed source SHA-256: `d7b95848879652f94acfedf5e384504cb49dfea836f33c533999470dba7856b0`.
 
 See [preserved receipts](reports/studionet/), [direct test report](reports/direct-tests.xml), and [resume notes](docs/RESUME.md). StudioNet cannot establish an EVM recipient payout; that requires separate testnet verification.
 
@@ -57,7 +57,7 @@ npm run build
 npm run dev
 ```
 
-`npm test` currently runs only the receipt-decoder unit tests. No frontend component or browser test suite is complete. The development server binds to `127.0.0.1`.
+`npm test` runs receipt-decoder and frontend unit/component tests. Browser-wallet E2E is not yet complete. The development server binds to `127.0.0.1`.
 
 ```powershell
 uv venv --python 3.12 .venv

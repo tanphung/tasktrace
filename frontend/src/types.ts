@@ -4,6 +4,7 @@ export interface Artifact {
   role:'SOURCE'|'A'|'B'; content:string; byte_length:number; sha256:string;
   submission_id:string; issuer:string; upstream:string; revision:number;
   chain_id:string; contract:string; job_id:string;
+  content_type:string;encoding:string;
 }
 export interface Citation {chunk_id:string;quote:string;start_byte:number;end_byte:number;chunk_sha256:string}
 export interface Assessment {obligation_id:string;status:Outcome;reason:string;citations:Citation[]}

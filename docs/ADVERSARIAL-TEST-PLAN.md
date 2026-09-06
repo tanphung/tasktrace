@@ -1,5 +1,16 @@
 # TaskTrace — Kế hoạch kiểm thử đối kháng v0.2
 
+## Addendum v0.3 — regression của lỗi live 05/09
+
+- R01: thiếu citation SOURCE/A/B ở từng obligation determinate phải bị parser từ chối, kể cả SATISFIED coverage.
+- R02: output lần đầu thiếu citation, lần hai hợp lệ: đúng hai calls với cùng full snapshot; kết quả hợp lệ không bị thay status.
+- R03: cả hai outputs lỗi: dừng đúng hai calls, review/ledger giữ nguyên; không mint credit hoặc trả UNASSESSABLE giả.
+- R04: snapshot hash bị sửa: không gọi LLM, không retry.
+- R05: valid first output: đúng một call; prompt skeleton không điền verdict sẵn và chứa đủ roles/chunks, kể cả optional B_SOURCE.
+- R06: validator vẫn từ chối leader sai material outcome hoặc reason không được evidence hỗ trợ sau sửa prompt/retry.
+
+Các test trên là regression có output kiểm soát, không thay thế ba ca live consensus và các lần lặp bắt buộc.
+
 Tất cả case trong file này là yêu cầu chưa chạy. Không được báo “pass” khi mới viết test hoặc dùng mock cho hành vi consensus thực.
 
 ## Phân tầng

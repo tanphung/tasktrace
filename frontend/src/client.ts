@@ -3,6 +3,7 @@ import {studionet,testnetBradbury} from 'genlayer-js/chains';
 import {TransactionHashVariant, type Address} from 'genlayer-js/types';
 import deployment from './deployment.json';
 import type {Job} from './types';
+import {canonical,digest,verifyArtifacts} from './evidence';
 
 export const chain = deployment.network === 'testnet-bradbury' ? testnetBradbury : studionet;
 export const contract = deployment.contract as Address;
@@ -15,6 +16,14 @@ export async function readJob(id:string):Promise<Job> {
   if (typeof value !== 'string') throw new Error('Unexpected contract response');
   const job = JSON.parse(value) as Job;
   if (job.id !== id || Number(job.chain_id) !== chain.id || job.contract.toLowerCase() !== contract.toLowerCase()) throw new Error('Contract evidence domain mismatch');
+  await verifyArtifacts(job);
+  if(job.review){
+    const raw=await readClient.readContract({address:contract,functionName:'get_review_input',args:[id],transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+    if(typeof raw!=='string')throw new Error('Missing review snapshot');
+    const input=JSON.parse(raw);
+    const expected=await digest(canonical(input.snapshot));
+    if(expected!==job.review.snapshot_sha256||expected!==input.snapshot_sha256||input.snapshot.terms_hash!==job.terms_hash||canonical(input.snapshot.artifacts)!==canonical((['SOURCE','A','B'] as const).flatMap(role=>job.artifacts[role]?[job.artifacts[role]]:[])))throw new Error('Review snapshot mismatch');
+  }
   return job;
 }
 export async function listJobs():Promise<string[]> {

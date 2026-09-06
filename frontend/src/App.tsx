@@ -1,27 +1,66 @@
-import {useEffect,useState} from 'react';
-import {ArrowUpRight,Plus,RefreshCw,Route,FileText,ShieldCheck,ArrowRight,Layers3} from 'lucide-react';
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {flushSync} from 'react-dom';
+import {ArrowUpRight,Plus,RefreshCw,Route,FileText,ShieldCheck,ArrowRight,Layers3,Wallet} from 'lucide-react';
+import type {Address} from 'genlayer-js/types';
 import {chain,contract,explorer,short,listJobs,readJob,jobHref} from './client';
 import type {Job,Artifact} from './types';
+import {Findings,Payments,label} from './Findings';
+import {Actions,NewJob} from './Actions';
+import {connect,history,observe,pending,type TxRecord} from './transactions';
+import {pageContext,registerWorkTools} from './webmcp';
+import {RecoverTransaction} from './RecoverTransaction';
 
-export function Evidence({artifact,label,index}:{artifact?:Artifact;label:string;index:string}) {
-  return <article className="evidence-card"><div className="card-heading"><span className="step-square">{index}</span><div><h3>{label}</h3><span className="meta">{artifact ? `${artifact.byte_length} bytes · immutable revision 1` : 'Awaiting submission'}</span></div>{artifact && <ShieldCheck size={18} className="mint"/>}</div><div className="document">{artifact?.content ?? 'No document has been submitted for this step.'}</div>{artifact && <footer><span>SHA-256</span><code title={artifact.sha256}>{short(artifact.sha256)}</code></footer>}</article>;
+export function Evidence({artifact,label:indexLabel,index}:{artifact?:Artifact;label:string;index:string}) {
+  return <article className="evidence-card" id={`evidence-${artifact?.role??index}`}><div className="card-heading"><span className="step-square">{index}</span><div><h3>{indexLabel}</h3><span className="meta">{artifact?`${artifact.byte_length} bytes · immutable revision 1`:'Awaiting submission'}</span></div>{artifact&&<ShieldCheck size={18} className="mint" aria-label="Displayed content hash checked"/>}</div><div className="document">{artifact?.content??'No document has been submitted for this step.'}</div>{artifact&&<footer><span>SHA-256</span><code title={artifact.sha256}>{short(artifact.sha256)}</code></footer>}</article>;
 }
+const selectedFromUrl=()=>new URLSearchParams(location.hash.slice(1)).get('job')??'';
 
-export default function App() {
-  const [ids,setIds]=useState<string[]>([]);
-  const [job,setJob]=useState<Job>();
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState('');
-  const [selected,setSelected]=useState(()=>new URLSearchParams(location.hash.slice(1)).get('job') ?? '');
-  async function refresh() {
-    setLoading(true);setError('');
-    try {const found=await listJobs();setIds(found);const id=selected || found[0];if(id){setJob(await readJob(id));if(!selected)setSelected(id);}}
-    catch(e){setError(e instanceof Error ? e.message:'Unable to read the network');}
-    finally{setLoading(false);}
-  }
-  useEffect(()=>{void refresh();},[selected]);
-  return <div className="app-shell"><aside className="sidebar"><a href="#" className="brand"><img src="/icon.svg" alt=""/><span>TaskTrace<span className="brand-dot">.</span></span></a><div className="sidebar-label">WORKSPACE</div><a className="nav-item active" href="#"><Layers3 size={18}/> Work handoffs <span>{ids.length}</span></a><div className="sidebar-label jobs-label">ON-CHAIN JOBS</div><nav aria-label="Jobs">{ids.map(id=><a className={`job-link ${id===selected?'selected':''}`} key={id} href={jobHref(id)} onClick={()=>setSelected(id)}><span className="tiny-dot"/>{id.replace(/-1-[a-f0-9]+$/,'').replaceAll('-',' ')}</a>)}</nav><div className="sidebar-bottom"><ShieldCheck size={19}/><p>Evidence first.<br/><strong>Responsibility follows.</strong></p><a href={`${explorer}/contracts/${contract}`} target="_blank" rel="noreferrer">View contract <ArrowUpRight size={14}/></a></div></aside>
-    <main className="main"><header className="topbar"><span className="breadcrumb">Workspace <span>/</span> Work handoffs</span><span className="network"><span className="tiny-dot"/>{chain.name} · development</span></header><div className="content"><div className="page-heading"><div><span className="eyebrow">ACCOUNTABLE WORK, STEP BY STEP</span><h1>Every handoff tells a story.</h1><p>Follow the evidence. See where responsibility begins.</p></div><button className="primary" disabled title="New-job flow is being integrated"><Plus size={17}/> New job</button></div>
-    <div className="notice"><Route size={17}/><span>Live StudioNet build. Reviews are being tested; recipient payments are not yet verified.</span></div>
-    <section className="workspace"><div className="section-heading"><div><span className="eyebrow">WORK RECORD</span><h2>{job?.terms.title ?? 'Your work handoffs'}</h2></div><button className="icon-button" aria-label="Refresh on-chain data" onClick={()=>void refresh()} disabled={loading}><RefreshCw size={17} className={loading?'spinning':''}/></button></div>{error && <div className="error" role="alert">{error}<button onClick={()=>void refresh()}>Retry</button></div>}{!job && !error && <p className="empty">{loading?'Reading the contract…':'No finalized jobs yet. New work records will appear here.'}</p>}{job && <><div className="job-summary"><span className="status">{job.status.replaceAll('_',' ')}</span><code>{job.id}</code><span className="meta">Client {short(job.client)}</span></div><div className="brief"><FileText size={18}/><div><span className="eyebrow">AGREED TASK</span><p>{job.terms.task}</p></div></div><div className="handoff-path"><span>01 <strong>Reference</strong></span><ArrowRight size={18}/><span>02 <strong>Extraction · A</strong></span><ArrowRight size={18}/><span>03 <strong>Report · B</strong></span></div><div className="evidence-grid"><Evidence index="01" label="Agreed reference" artifact={job.artifacts.SOURCE}/><Evidence index="A" label="Extraction handoff" artifact={job.artifacts.A}/><Evidence index="B" label="Final report" artifact={job.artifacts.B}/></div><div className="review-placeholder"><ShieldCheck size={22}/><div><h3>{job.review?'GenLayer review is available':'Review follows the evidence'}</h3><p>{job.review?'The on-chain review has been recorded. Detailed findings are being integrated into this view.':'A verdict is only shown after the contract records one. Submitted work is not automatically an AI-verified result.'}</p></div></div></>}</section><footer className="page-footer"><span>TaskTrace / Future of Work</span><span>Public evidence · fixed obligations · GenLayer consensus</span></footer></div></main></div>;
+export default function App(){
+  const [ids,setIds]=useState<string[]>([]),[job,setJob]=useState<Job>();
+  const [loading,setLoading]=useState(true),[error,setError]=useState('');
+  const [selected,setSelected]=useState(selectedFromUrl),[newJob,setNewJob]=useState(false);
+  const [account,setAccount]=useState<Address>(),[connecting,setConnecting]=useState(false),[walletError,setWalletError]=useState('');
+  const [records,setRecords]=useState<TxRecord[]>([]),[historyError,setHistoryError]=useState('');
+  const generation=useRef(0),observing=useRef(false);
+  useEffect(()=>registerWorkTools(pageContext(),()=>flushSync(()=>setNewJob(true))),[]);
+  const refresh=useCallback(async()=>{
+    const turn=++generation.current;setLoading(true);setError('');setJob(undefined);
+    try{
+      const found=await listJobs();if(turn!==generation.current)return;setIds(found);
+      const id=selected||found[0];if(!id){setJob(undefined);return;}
+      const result=await readJob(id);if(turn!==generation.current)return;setJob(result);
+      if(!selected){location.hash=jobHref(id);setSelected(id);}
+    }catch(e){if(turn===generation.current){setJob(undefined);setError(e instanceof Error?e.message:'Unable to read the network');}}
+    finally{if(turn===generation.current)setLoading(false);}
+  },[selected]);
+  useEffect(()=>{void refresh();return()=>{generation.current++;};},[refresh]);
+  useEffect(()=>{const change=()=>{const id=selectedFromUrl();if(id===selected)return;generation.current++;setJob(undefined);setLoading(true);setSelected(id);setNewJob(false);};window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change);},[selected]);
+  const loadHistory=useCallback(()=>{try{setRecords(history());setHistoryError('');}catch(e){setHistoryError(e instanceof Error?e.message:'Local tracking unavailable');}},[]);
+  useEffect(()=>{loadHistory();window.addEventListener('tasktrace:transactions',loadHistory);window.addEventListener('storage',loadHistory);return()=>{window.removeEventListener('tasktrace:transactions',loadHistory);window.removeEventListener('storage',loadHistory);};},[loadHistory]);
+  const checkTransactions=useCallback(async()=>{
+    if(observing.current)return;observing.current=true;
+    try{for(const record of history().filter(item=>pending(item)&&item.hash)){const next=await observe(record);if(next.phase==='FINALIZED_SUCCESS')await refresh();}}
+    catch{/* Keep the same hash after observation errors. Never automatically resubmit. */}
+    finally{observing.current=false;}
+  },[refresh]);
+  useEffect(()=>{void checkTransactions();const timer=setInterval(()=>void checkTransactions(),8000);return()=>clearInterval(timer);},[checkTransactions]);
+  async function connectWallet(){setConnecting(true);setWalletError('');try{setAccount(await connect());}catch(e){setAccount(undefined);setWalletError(e instanceof Error?e.message:'Wallet connection failed');}finally{setConnecting(false);}}
+  function choose(id:string){setJob(undefined);setNewJob(false);location.hash=jobHref(id);setSelected(id);}
+  const busy=Boolean(historyError)||records.some(pending);
+  return <div className="app-shell">
+    <aside className="sidebar"><a href="#" className="brand"><img src="/icon.svg" alt=""/><span>TaskTrace<span className="brand-dot">.</span></span></a><div className="sidebar-label">WORKSPACE</div><a className="nav-item active" href="#"><Layers3 size={18}/> Work handoffs <span>{ids.length}</span></a><div className="sidebar-label jobs-label">ON-CHAIN JOBS</div><nav aria-label="Jobs">{ids.map(id=><a className={`job-link ${id===selected?'selected':''}`} key={id} href={jobHref(id)} onClick={()=>choose(id)}><span className="tiny-dot"/>{id.replace(/-\d+-[a-f0-9]+$/,'').replaceAll('-',' ')}</a>)}</nav><div className="sidebar-bottom"><ShieldCheck size={19}/><p>Evidence first.<br/><strong>Responsibility follows.</strong></p><a href={`${explorer}/contracts/${contract}`} target="_blank" rel="noreferrer">View contract <ArrowUpRight size={14}/></a></div></aside>
+    <main className="main"><header className="topbar"><span className="breadcrumb">Workspace <span>/</span> Work handoffs</span><div className="button-row"><span className="network"><span className="tiny-dot"/>{chain.name}</span><button onClick={()=>void connectWallet()} disabled={connecting}><Wallet size={17}/>{connecting?'Connecting…':account?short(account):'Connect wallet'}</button></div></header>
+      <div className="content"><div className="page-heading"><div><span className="eyebrow">ACCOUNTABLE WORK, STEP BY STEP</span><h1>Follow the handoff.</h1><p>Find where an error began, without blaming the next worker for inheriting it.</p></div><button className="primary" onClick={()=>setNewJob(true)} disabled={busy}><Plus size={17}/> New job</button></div>
+        <div className="notice"><Route size={17}/><span>StudioNet development build. Public evidence, test amounts only. Recipient payments are not verified.</span></div>
+        {walletError&&<p className="error" role="alert">{walletError}</p>}{historyError&&<p className="error" role="alert">{historyError}</p>}
+        {!!records.length&&<section className="transaction-panel" aria-label="Transaction history"><div className="section-heading"><h3>Transactions on this device</h3><button onClick={()=>void checkTransactions()}>Check existing hashes</button></div>{records.slice(0,8).map(item=><div className="transaction" key={item.id}><div><strong>{label(item.method)}</strong><span className="meta">{item.jobId}</span></div><span className={`verdict ${item.phase==='FINALIZED_SUCCESS'?'satisfied':item.phase==='FAILED'?'violated':''}`}>{item.phase==='FINALIZED_SUCCESS'?'Finalized execution':label(item.phase)}</span>{item.hash?<a href={`${explorer}/transactions/${item.hash}`} target="_blank" rel="noreferrer"><code>{short(item.hash)}</code><ArrowUpRight size={13}/></a>:<span className="meta">Check wallet history before retrying</span>}{item.error&&<p className="meta">{item.error}</p>}{!item.hash&&pending(item)&&<RecoverTransaction record={item}/>}</div>)}<p className="meta">A finalized execution is not proof of recipient payment. Pending or uncertain actions are never automatically resent.</p></section>}
+        {newJob?<NewJob account={account} onClose={()=>setNewJob(false)} onSubmitted={id=>{loadHistory();choose(id);}}/>:<section className="workspace"><div className="section-heading"><div><span className="eyebrow">WORK RECORD</span><h2>{job?.terms.title??'Your work handoffs'}</h2></div><button className="icon-button" aria-label="Refresh on-chain data" onClick={()=>void refresh()} disabled={loading}><RefreshCw size={17} className={loading?'spinning':''}/></button></div>
+          <label className="mobile-job-picker">Work record<select value={selected} onChange={e=>choose(e.target.value)}>{ids.map(id=><option key={id}>{id}</option>)}</select></label>
+          {error&&<div className="error" role="alert">{error}<button onClick={()=>void refresh()}>Retry read</button></div>}{!job&&!error&&<p className="empty">{loading?'Reading finalized contract state…':'No finalized jobs yet. Create a work record to begin.'}</p>}
+          {job&&<><div className="job-summary"><span className="status">{label(job.status)}</span><code>{job.id}</code><span className="meta">Client {short(job.client)}</span></div><div className="brief"><FileText size={18}/><div><span className="eyebrow">AGREED TASK</span><p>{job.terms.task}</p><span className="meta">B source verification: {job.terms.verify_source?'required':'not part of the agreed duty'}</span></div></div><div className="handoff-path"><span>01 <strong>Reference</strong></span><ArrowRight size={18}/><span>02 <strong>Extraction · A</strong></span><ArrowRight size={18}/><span>03 <strong>Report · B</strong></span></div><div className="evidence-grid"><Evidence index="01" label="Agreed reference" artifact={job.artifacts.SOURCE}/><Evidence index="A" label="Extraction handoff" artifact={job.artifacts.A}/><Evidence index="B" label="Final report" artifact={job.artifacts.B}/></div><Actions key={job.id+job.status+(account??'')} job={job} account={account} busy={busy} onSubmitted={loadHistory}/><Findings job={job}/><Payments job={job}/></>}
+        </section>}
+        <footer className="page-footer"><span>TaskTrace / Future of Work</span><a href="https://github.com/tanphung/tasktrace" target="_blank" rel="noreferrer">Source & test evidence <ArrowUpRight size={13}/></a></footer>
+      </div>
+    </main>
+  </div>;
 }
