@@ -6,7 +6,7 @@ import {chain,contract,explorer,short,listJobs,readJob,jobHref} from './client';
 import type {Job,Artifact} from './types';
 import {Findings,Payments,label} from './Findings';
 import {Actions,NewJob} from './Actions';
-import {connect,history,observe,pending,type TxRecord} from './transactions';
+import {connect,history,observe,pending,watchWallet,type TxRecord} from './transactions';
 import {pageContext,registerWorkTools} from './webmcp';
 import {RecoverTransaction} from './RecoverTransaction';
 
@@ -22,6 +22,7 @@ export default function App(){
   const [account,setAccount]=useState<Address>(),[connecting,setConnecting]=useState(false),[walletError,setWalletError]=useState('');
   const [records,setRecords]=useState<TxRecord[]>([]),[historyError,setHistoryError]=useState('');
   const generation=useRef(0),observing=useRef(false);
+  useEffect(()=>{if(!account)return;return watchWallet(()=>{setAccount(undefined);setWalletError('Wallet account or network changed. Reconnect before taking an action.');});},[account]);
   useEffect(()=>registerWorkTools(pageContext(),()=>flushSync(()=>setNewJob(true))),[]);
   const refresh=useCallback(async()=>{
     const turn=++generation.current;setLoading(true);setError('');setJob(undefined);

@@ -1,5 +1,9 @@
 # TaskTrace — Evidence schema v0.2
 
+## Addendum v0.4 — version-bound coverage policy
+
+New jobs bind `tasktrace-1.1` in immutable terms. Existing IDs and response schema remain unchanged; the A_COVERAGE/B_COVERAGE descriptions now require explicit answers or explicit unknowns. Timing alone cannot answer an independent prerequisite. Both derivation and grounding receive the same policy. This changes the rubric version, not artifact bytes, hash/chunk validation, money rules, or existing deployment state.
+
 ## Addendum v0.3 — schema thực thi cho regression citation
 
 Parser hiện yêu cầu root đúng hai keys `reviewed_chunks`, `assessments`. Mỗi assessment đúng `obligation_id`, `status`, `reason`, `citations`; mỗi citation chỉ `chunk_id`, `quote`. Với SATISFIED hoặc VIOLATED, phải có citation từ cả hai `evidence_roles` của obligation, kể cả coverage. Quote phải là substring nguyên văn, 1–500 UTF-8 bytes; 1–4 citations/assessment, reason ≤900 bytes. UNASSESSABLE không được dùng chỉ để né lỗi format. Byte offsets được contract suy ra sau consensus. Prompt skeleton chỉ chứa ID hợp lệ và placeholder, không tự điền status/quote. Retry không thay đổi schema, artifact identity, rubric hoặc snapshot hash.

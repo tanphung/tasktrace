@@ -1,5 +1,11 @@
 # TaskTrace — Kế hoạch kiểm thử đối kháng v0.2
 
+## Addendum v0.4 — preserve ambiguous historical case
+
+The original A-fault fixture (`immediately`, with no explicit approval answer) conflated inherited incorrect information with an inherited omission that B was required to flag. Preserve its exact source/task/A/B bytes as `timing-omission`; under the clarified v1.1 rubric both stages violate coverage. Keep historical v1.0 receipts unchanged and report both versions, never combine them into a cleaned success rate.
+
+For the unambiguous core A-fault case, use an explicit incorrect claim that approval is not needed. B faithfully reproducing this complete answer satisfies its non-source-checking duties. Versioned fixture changes are disclosed, not retroactively applied. Add tests asserting the same coverage policy reaches both derivation and grounding, independent status disagreement still rejects, and grounded-looking but unsupported reasoning still rejects. Unit mocks prove enforcement only; run all nine fixtures live, including the unchanged timing case, and repeat the three clear core cases three times.
+
 ## Addendum v0.3 — regression của lỗi live 05/09
 
 - R01: thiếu citation SOURCE/A/B ở từng obligation determinate phải bị parser từ chối, kể cả SATISFIED coverage.

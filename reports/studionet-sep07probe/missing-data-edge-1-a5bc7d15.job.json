@@ -1,0 +1,209 @@
+{
+  "a_deadline": 1788965366,
+  "accept_deadline": 1788965278,
+  "accepted": {
+    "A": true,
+    "B": true
+  },
+  "adjudication_deadline": 1788965484,
+  "artifacts": {
+    "A": {
+      "byte_length": 102,
+      "chain_id": "61999",
+      "content": "Trial export permissions are unknown from this documentation. Paid accounts may export after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+      "job_id": "missing-data-edge-1-a5bc7d15",
+      "revision": 1,
+      "role": "A",
+      "sha256": "59ac874826d3fdc0d2d16cb03b415447db228f5ab86f76fc7c2fa9511acb45a4",
+      "submission_id": "1282b814bf10d5c481932fd4d7ba209d245e534b4b98637d8915ed30f9d4dab5",
+      "upstream": "5764d0cefe4182d71da7f4eb9e90f98fd053d7b47a4673bea7bbd009ec31047c"
+    },
+    "B": {
+      "byte_length": 78,
+      "chain_id": "61999",
+      "content": "Trial export permissions are unknown. Paid accounts may export after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x808a7d4d39105264570bd993574d4b1075f69874",
+      "job_id": "missing-data-edge-1-a5bc7d15",
+      "revision": 1,
+      "role": "B",
+      "sha256": "b1cf168d0acd2cdb8e64d46330d24b164f860f9144bf38f01964015ad1870d02",
+      "submission_id": "7d67cdcfac4886c76117b8817f42f2dd967036dcfc54748bc9a30f82b3f72a0e",
+      "upstream": "1282b814bf10d5c481932fd4d7ba209d245e534b4b98637d8915ed30f9d4dab5"
+    },
+    "SOURCE": {
+      "byte_length": 101,
+      "chain_id": "61999",
+      "content": "The documentation does not specify trial export permissions. Paid accounts may export after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+      "job_id": "missing-data-edge-1-a5bc7d15",
+      "revision": 1,
+      "role": "SOURCE",
+      "sha256": "9d4e41f4a6b4828f865a1ac8c5ca07882844c672a9f884be70acc684a519f7b1",
+      "submission_id": "5764d0cefe4182d71da7f4eb9e90f98fd053d7b47a4673bea7bbd009ec31047c",
+      "upstream": ""
+    }
+  },
+  "b_deadline": 1788965406,
+  "b_missing": false,
+  "chain_id": "61999",
+  "claims": {},
+  "client": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+  "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+  "created_at": 1788878878,
+  "id": "missing-data-edge-1-a5bc7d15",
+  "ledger": {
+    "credits": {
+      "A": "15",
+      "B": "27",
+      "CLIENT": "0"
+    },
+    "emitted": "0",
+    "issued": "42",
+    "received": "42"
+  },
+  "outcomes": {
+    "A": "SATISFIED",
+    "B": "SATISFIED"
+  },
+  "resolved_at": 1788879138,
+  "review": {
+    "result": {
+      "assessments": [
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "9d4e41f4a6b4828f865a1ac8c5ca07882844c672a9f884be70acc684a519f7b1",
+              "end_byte": 101,
+              "quote": "The documentation does not specify trial export permissions. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "59ac874826d3fdc0d2d16cb03b415447db228f5ab86f76fc7c2fa9511acb45a4",
+              "end_byte": 102,
+              "quote": "Trial export permissions are unknown from this documentation. Paid accounts may export after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "A_MEANING",
+          "reason": "A preserves the meaning of the source: trial export permissions are unspecified (unknown), and paid accounts may export but require approval.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "9d4e41f4a6b4828f865a1ac8c5ca07882844c672a9f884be70acc684a519f7b1",
+              "end_byte": 101,
+              "quote": "The documentation does not specify trial export permissions. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "59ac874826d3fdc0d2d16cb03b415447db228f5ab86f76fc7c2fa9511acb45a4",
+              "end_byte": 102,
+              "quote": "Trial export permissions are unknown from this documentation. Paid accounts may export after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "A_COVERAGE",
+          "reason": "A explicitly addresses all requested topics: for trial accounts, it states permissions are unknown; for paid accounts, it states they may export and that approval is needed.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "59ac874826d3fdc0d2d16cb03b415447db228f5ab86f76fc7c2fa9511acb45a4",
+              "end_byte": 102,
+              "quote": "Trial export permissions are unknown from this documentation. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "b1cf168d0acd2cdb8e64d46330d24b164f860f9144bf38f01964015ad1870d02",
+              "end_byte": 78,
+              "quote": "Trial export permissions are unknown. Paid accounts may export after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_FAITHFULNESS",
+          "reason": "B faithfully reports from A, preserving the conditions: trial permissions are unknown, and paid accounts require approval to export.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "59ac874826d3fdc0d2d16cb03b415447db228f5ab86f76fc7c2fa9511acb45a4",
+              "end_byte": 102,
+              "quote": "Trial export permissions are unknown from this documentation. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "b1cf168d0acd2cdb8e64d46330d24b164f860f9144bf38f01964015ad1870d02",
+              "end_byte": 78,
+              "quote": "Trial export permissions are unknown. Paid accounts may export after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_COVERAGE",
+          "reason": "B explicitly answers all topics requested in the task: trial permissions are unknown, and for paid accounts, export is possible and approval is needed. B does not silently inherit any omission from A.",
+          "status": "SATISFIED"
+        }
+      ],
+      "reviewed_chunks": [
+        "SOURCE:1:0",
+        "A:1:0",
+        "B:1:0"
+      ]
+    },
+    "reviewed_at": 1788879138,
+    "snapshot_sha256": "c11f6de1a316cdca6a80dd47abd5db1d5c6e28b4ddf7ca2448ead6670fc46361",
+    "terms_hash": "96a12ffec0e62a0dc5c817bdee05e074d4b5a420fdbd9ec0af33ab35f336e44c"
+  },
+  "review_deadline": 1788965447,
+  "settlement_reason": "GENLAYER_REVIEW",
+  "status": "RESOLVED",
+  "terms": {
+    "accept_seconds": 86400,
+    "adjudication_seconds": 86400,
+    "money": {
+      "A": {
+        "bond": "5",
+        "fee": "10",
+        "penalty": "3"
+      },
+      "B": {
+        "bond": "7",
+        "fee": "20",
+        "penalty": "4"
+      }
+    },
+    "neutral_unwind": true,
+    "review_seconds": 86400,
+    "step_seconds": 86400,
+    "task": "Explain whether trial and paid accounts can export, and whether approval is needed.",
+    "title": "Honest uncertainty is not a breach",
+    "undisputed_timeout_accepts": true,
+    "verify_source": false,
+    "version": "tasktrace-1.1"
+  },
+  "terms_hash": "96a12ffec0e62a0dc5c817bdee05e074d4b5a420fdbd9ec0af33ab35f336e44c",
+  "workers": {
+    "A": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+    "B": "0x808a7d4d39105264570bd993574d4b1075f69874"
+  }
+}

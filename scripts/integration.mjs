@@ -11,9 +11,12 @@ import {cases} from '../evidence/fixtures/cases.mjs';
 import {assertExecution, statusName, executionName} from './receipts.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const reportDir = resolve(root, 'reports/studionet');
+const isolation=process.env.TASKTRACE_ISOLATION??'';
+assert.ok(!isolation||/^[a-z0-9]{1,12}$/.test(isolation),'Invalid isolated test-run identifier');
+const runName=`studionet${isolation?'-'+isolation:''}`;
+const reportDir = resolve(root, 'reports',runName);
 const manifestPath = resolve(reportDir, 'manifest.json');
-const secretsPath = resolve(root, '.secrets/studionet.json');
+const secretsPath = resolve(root, '.secrets',runName+'.json');
 const exists = async path => access(path).then(()=>true,()=>false);
 const stringify = obj => JSON.stringify(obj, (_, v)=>typeof v === 'bigint' ? v.toString() : v, 2);
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
@@ -40,11 +43,14 @@ await save();
 async function transaction(step,client,submit) {
   let item = manifest.steps[step];
   if (!item) {
+    item = manifest.steps[step] = {phase:'SIGNING',startedAt:new Date().toISOString()};
+    await save(); // Persist intent before any potentially ambiguous signed submission.
     const txHash = await submit();
-    item = manifest.steps[step] = {hash:txHash,submittedAt:new Date().toISOString()};
+    Object.assign(item,{hash:txHash,phase:'PENDING',submittedAt:new Date().toISOString()});
     await save();
     console.log(JSON.stringify({step,submitted:txHash}));
   }
+  assert.ok(item.hash,'Uncertain submission without a saved hash: inspect wallet/network history before any manual recovery. Never automatically resend.');
   if (item.finalized && item.execution === 'FINISHED_WITH_RETURN') return item;
   // Poll the SAME hash after any observation timeout. Never resubmit an uncertain write.
   let receipt;
@@ -64,6 +70,7 @@ async function transaction(step,client,submit) {
   }
   assertExecution(receipt ?? {},true);
   item.finalized = true;
+  item.phase = 'FINALIZED_SUCCESS';
   item.execution = executionName(receipt);
   item.finishedAt = new Date().toISOString();
   item.to = receipt.to_address ?? receipt.recipient ?? receipt.data?.contract_address;
@@ -80,7 +87,7 @@ try {
   const read = async (fn,args=[])=>JSON.parse(await clients.client.readContract({address,functionName:fn,args}));
   const config = await read('get_config');
   assert.equal(Number(config.chain_id),chain);
-  assert.equal(config.version,'tasktrace-1.0');
+  assert.equal(config.version,'tasktrace-1.1');
   const schema = await clients.client.getContractSchema(address);
   await writeFile(resolve(reportDir,'schema.json'),stringify(schema));
   manifest.schemaVerified = true;
@@ -88,12 +95,15 @@ try {
   await save();
   const repetitions = Number(process.env.TASKTRACE_REPETITIONS ?? '1');
   assert.ok(Number.isInteger(repetitions) && repetitions >= 1 && repetitions <= 3);
+  const runLabel=process.env.TASKTRACE_RUN_LABEL??'';
+  assert.ok(!runLabel||/^[a-z0-9]{1,12}$/.test(runLabel),'Invalid explicit run label');
   const selection = process.env.TASKTRACE_CASES?.split(',');
+  if(selection)assert.ok(selection.every(id=>cases.some(c=>c.id===id)),'Unknown fixture selection');
   const selected = selection ? cases.filter(c=>selection.includes(c.id)) : cases.filter(c=>c.core);
   assert.ok(selected.length,'No matching cases');
   for (const fixture of selected) {
     for (let repetition=1;repetition<=repetitions;repetition++) {
-      const id = `${fixture.id}-${repetition}-${sourceHash.slice(0,8)}`;
+      const id = `${fixture.id}${runLabel?'-'+runLabel:''}-${repetition}-${sourceHash.slice(0,8)}`;
       const write = (step,role,fn,args,value=0n)=>transaction(`${id}-${step}`,clients[role],()=>clients[role].writeContract({address,functionName:fn,args,value,leaderOnly:false,consensusMaxRotations:3}));
       await write('create','client','create_job',[id,fixture.title,fixture.task,fixture.source,new CalldataAddress(hexToBytes(wallet('A'))),new CalldataAddress(hexToBytes(wallet('B'))),10n,20n,5n,7n,3n,4n,86400n,86400n,86400n,86400n,Boolean(fixture.verify_source)],30n);
       let job = await read('get_job',[id]);
@@ -103,6 +113,10 @@ try {
       job = await read('get_job',[id]);
       await write('submit-b','B','submit_work',[id,fixture.b,job.artifacts.A.submission_id]);
       await write('request-review','client','request_review',[id]);
+      if(!manifest.steps[`${id}-resolve`]){
+        const current=await read('get_job',[id]);
+        assert.ok(current.adjudication_deadline>Math.floor(Date.now()/1000)+60,'Review deadline expired or too close. Preserve this job and explicitly start a new labeled run; do not send an expired resolve.');
+      }
       await write('resolve','client','resolve_review',[id]);
       job = await read('get_job',[id]);
       manifest.cases[id] = {fixture:fixture.id,repetition,expected:fixture.expected,actual:job.outcomes,status:job.status,passed:false};
@@ -121,6 +135,7 @@ try {
   console.log(JSON.stringify({completed:true,contract:address,passingCases:Object.values(manifest.cases).filter(c=>c.passed).length}));
 } catch (error) {
   manifest.lastError = {at:new Date().toISOString(),message:String(error.shortMessage ?? error.message).split('\n')[0]};
+  (manifest.errors ??= []).push(manifest.lastError);
   await save();
   console.error(JSON.stringify(manifest.lastError));
   process.exitCode = 1;

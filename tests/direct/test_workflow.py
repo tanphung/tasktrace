@@ -3,7 +3,7 @@ import pytest
 
 
 def test_config_and_empty_list(system):
-    assert json.loads(system.c.get_config())["version"] == "tasktrace-1.0"
+    assert json.loads(system.c.get_config())["version"] == "tasktrace-1.1"
     assert json.loads(system.c.list_jobs(0, 20)) == {"total": 0, "ids": []}
 
 

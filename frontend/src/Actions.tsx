@@ -1,9 +1,17 @@
-import {useState,type FormEvent} from 'react';
+import {useEffect,useState,type FormEvent} from 'react';
 import {CalldataAddress,type Address,type CalldataEncodable} from 'genlayer-js/types';
 import {hexToBytes,parseUnits} from 'viem';
 import type {Job,Role} from './types';
 import {label,money} from './Findings';
 import {submit} from './transactions';
+import {Terms} from './Terms';
+
+export function validatePublicText(text:string,limit:number):number {
+  const bytes=new TextEncoder().encode(text);
+  if(!text.trim()||text.startsWith('\uFEFF')||new TextDecoder().decode(bytes)!==text||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text))throw new Error('Use non-empty valid UTF-8 text without binary controls or a BOM.');
+  if(bytes.length>limit)throw new Error(`Text exceeds the ${limit}-byte limit. Nothing was sent.`);
+  return bytes.length;
+}
 
 export function roleOf(job:Job,address?:string):Role|undefined {
   if(!address)return;
@@ -15,14 +23,23 @@ export function deadline(job:Job):number|undefined {
 }
 export function Actions({job,account,busy,onSubmitted}:{job:Job;account?:Address;busy:boolean;onSubmitted:()=>void}){
   const [text,setText]=useState(''),[error,setError]=useState(''),[signing,setSigning]=useState(false),[accepted,setAccepted]=useState(false);
-  const role=roleOf(job,account),due=deadline(job),expired=due!==undefined&&Date.now()/1000>=due;
+  const [now,setNow]=useState(()=>Date.now()/1000);
+  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()/1000),1000);return()=>clearInterval(timer);},[]);
+  const role=roleOf(job,account),due=deadline(job),expired=due!==undefined&&now>=due;
   const canSubmit=!expired&&((role==='A'&&job.status==='ACTIVE')||(role==='B'&&job.status==='A_SUBMITTED'));
   async function send(method:string,args:CalldataEncodable[]=[job.id],value=0n){
     if(!account||signing)return;setSigning(true);setError('');
-    try{await submit(account,job.id,method,args,value);setText('');onSubmitted();}catch(e){setError(e instanceof Error?e.message:'Could not submit');}finally{setSigning(false);}
+    try{
+      if(method==='submit_work'){
+        const used=Object.values(job.artifacts).reduce((sum,item)=>sum+item.byte_length,0);
+        validatePublicText(String(args[1]),Math.min(4096,(role==='A'?7168:8192)-used));
+      }
+      await submit(account,job.id,method,args,value);setText('');onSubmitted();
+    }catch(e){setError(e instanceof Error?e.message:'Could not submit');}finally{setSigning(false);}
   }
   return <section className="actions"><div><span className="eyebrow">NEXT ACTION</span><h3>{account?(role?`Connected as ${role==='CLIENT'?'client':`worker ${role}`}`:'Read-only: this wallet is not a participant'):'Connect your wallet to participate'}</h3>{due&&<p className="meta">{expired?'Deadline reached':'Deadline'}: {new Date(due*1000).toLocaleString()}. The contract timestamp is authoritative.</p>}</div>{error&&<p role="alert" className="error">{error}</p>}<fieldset disabled={!account||busy||signing}>
-    {job.status==='FUNDED'&&!expired&&(role==='A'||role==='B')&&!job.accepted[role]&&<><label className="check"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/>I accept this source, the task, fixed amounts, deadlines, neutral unwind and undisputed-timeout acceptance. B source checking is {job.terms.verify_source?'required':'not required'}.</label><code>Terms hash: {job.terms_hash}</code><button className="primary" disabled={!accepted} onClick={()=>void send('accept_job',[job.id,job.terms_hash],BigInt(job.terms.money[role].bond))}>Accept & deposit {money(job.terms.money[role].bond)}</button></>}
+    <Terms job={job}/>
+    {job.status==='FUNDED'&&!expired&&(role==='A'||role==='B')&&!job.accepted[role]&&<><label className="check"><input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)}/>I accept this source, the task, fixed amounts, deadlines, neutral unwind and undisputed-timeout acceptance. B source checking is {job.terms.verify_source?'required':'not required'}.</label><code>Terms hash: {job.terms_hash}</code><button className="primary" disabled={!accepted||!job.obligations?.length} onClick={()=>void send('accept_job',[job.id,job.terms_hash],BigInt(job.terms.money[role].bond))}>Accept & deposit {money(job.terms.money[role].bond)}</button></>}
     {job.status==='FUNDED'&&role==='CLIENT'&&<button onClick={()=>void send('cancel_job')}>Cancel before activation</button>}
     {canSubmit&&<form onSubmit={e=>{e.preventDefault();const upstream=job.artifacts[role==='A'?'SOURCE':'A']!.submission_id;void send('submit_work',[job.id,text,upstream]);}}><label>Final {role==='A'?'extraction handoff':'report'}<textarea required value={text} onChange={e=>setText(e.target.value)} rows={6} placeholder="Paste the complete final text. This submission is immutable and public."/></label><p className="meta">{new TextEncoder().encode(text).length} / 4096 bytes. The contract also enforces the combined evidence limit.</p><button className="primary" disabled={!text.trim()||new TextEncoder().encode(text).length>4096}>Submit immutable work</button></form>}
     {job.status==='REVIEWABLE'&&role&&<div className="button-row">{!expired&&<button className="primary" onClick={()=>void send('request_review')}>Request GenLayer review</button>}{role==='CLIENT'&&<button onClick={()=>void send('approve_work')}>Accept work without AI review</button>}</div>}
@@ -42,6 +59,7 @@ export function NewJob({account,onClose,onSubmitted}:{account?:Address;onClose:(
     event.preventDefault();if(!account||busy)return;setBusy(true);setError('');
     try{
       const data=new FormData(event.currentTarget),value=(key:string)=>String(data.get(key)??'');
+      validatePublicText(value('title'),120);validatePublicText(value('task'),768);validatePublicText(value('source'),4096);
       const a=value('workerA').trim(),b=value('workerB').trim();
       if(!/^0x[0-9a-fA-F]{40}$/.test(a)||!/^0x[0-9a-fA-F]{40}$/.test(b))throw new Error('Enter two valid worker wallet addresses.');
       if(new Set([a.toLowerCase(),b.toLowerCase(),account.toLowerCase()]).size!==3||[a,b].some(x=>/^0x0{40}$/.test(x)))throw new Error('The client and both workers must be three distinct nonzero wallets.');

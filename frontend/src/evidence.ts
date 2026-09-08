@@ -23,6 +23,40 @@ export function chunks(artifact:Artifact) {
 }
 function requireEvidence(ok:unknown,message:string):asserts ok {if(!ok)throw new Error(`Evidence integrity: ${message}`);}
 
+export function verifyLedger(job:Job):void {
+  const integer=(value:string)=>{requireEvidence(typeof value==='string'&&/^\d+$/.test(value),'invalid money');return BigInt(value);};
+  const amounts=job.terms.money;
+  const fees=integer(amounts.A.fee)+integer(amounts.B.fee);
+  const received=fees+(job.accepted.A?integer(amounts.A.bond):0n)+(job.accepted.B?integer(amounts.B.bond):0n);
+  requireEvidence(integer(job.ledger.received)===received,'received deposits mismatch');
+  const settled=['RESOLVED','CANCELLED'].includes(job.status);
+  const original={CLIENT:0n,A:0n,B:0n};
+  if(job.status==='CANCELLED'){
+    original.CLIENT=fees;original.A=job.accepted.A?integer(amounts.A.bond):0n;original.B=job.accepted.B?integer(amounts.B.bond):0n;
+  }else if(job.status==='RESOLVED'){
+    requireEvidence(job.outcomes,'missing settlement outcomes');
+    for(const role of ['A','B'] as const){
+      const {fee,bond,penalty}=amounts[role],f=integer(fee),b=integer(bond),p=integer(penalty);
+      requireEvidence(p<=b,'penalty exceeds bond');
+      const result=job.outcomes[role];requireEvidence(['SATISFIED','VIOLATED','UNASSESSABLE'].includes(result),'invalid settlement outcome');
+      original[role]=result==='SATISFIED'?f+b:result==='VIOLATED'?b-p:b;
+      original.CLIENT+=result==='SATISFIED'?0n:result==='VIOLATED'?f+p:f;
+    }
+  }
+  let emitted=0n,credits=0n;
+  for(const role of ['CLIENT','A','B'] as const){
+    const claim=job.claims[role];
+    if(claim){
+      requireEvidence(settled&&original[role]>0n&&integer(claim.amount)===original[role],'claim amount mismatch');
+      requireEvidence(claim.recipient===(role==='CLIENT'?job.client:job.workers[role])&&claim.settlement_id===`${job.id}:${role}:1`&&claim.kind===job.settlement_reason&&claim.state==='MESSAGE_EMITTED','claim identity mismatch');
+      emitted+=original[role];
+    }
+    const credit=integer(job.ledger.credits[role]);credits+=credit;
+    requireEvidence(credit===(claim?0n:original[role]),'credit allocation mismatch');
+  }
+  requireEvidence(integer(job.ledger.issued)===(settled?received:0n)&&integer(job.ledger.emitted)===emitted&&credits+emitted===(settled?received:0n),'ledger conservation mismatch');
+}
+
 export async function verifyArtifacts(job:Job):Promise<void> {
   let total=0;
   for (const role of ['SOURCE','A','B'] as const) {
@@ -41,9 +75,12 @@ export async function verifyArtifacts(job:Job):Promise<void> {
     requireEvidence(await digest(canonical(identity))===submission_id,'submission identity mismatch');
   }
   requireEvidence(total<=8192,'total size exceeded');
+  const termsHash=await digest(canonical({terms:job.terms,source:job.artifacts.SOURCE!.submission_id,job:job.id,workers:job.workers,client:job.client,accept_deadline:job.accept_deadline}));
+  requireEvidence(termsHash===job.terms_hash,'accepted terms hash mismatch');
+  verifyLedger(job);
   if(!job.review)return;
   requireEvidence(job.review.terms_hash===job.terms_hash,'review terms mismatch');
-  const all=['SOURCE','A','B'].flatMap(role=>job.artifacts[role as 'A']?chunks(job.artifacts[role as 'A']!):[]);
+  const all=(['SOURCE','A','B'] as const).flatMap(role=>job.artifacts[role]?chunks(job.artifacts[role]!):[]);
   requireEvidence(canonical(job.review.result.reviewed_chunks)===canonical(all.map(c=>c.id)),'review does not cover all chunks');
   const expected=['A_MEANING','A_COVERAGE',...(!job.b_missing?['B_FAITHFULNESS','B_COVERAGE',...(job.terms.verify_source?['B_SOURCE']:[])]:[])];
   requireEvidence(canonical(job.review.result.assessments.map(a=>a.obligation_id))===canonical(expected),'obligation sequence mismatch');

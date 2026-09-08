@@ -1,5 +1,18 @@
 # Mốc tiếp tục TaskTrace — cập nhật 06/09/2026
 
+## Mốc release candidate v1.1 — 08/09/2026
+
+Đây là mốc mới nhất và thay thế các số liệu cũ bên dưới khi có khác biệt.
+
+- Contract StudioNet v1.1: `0x8128cD94346c94fe1FF20204d54a4B980Ae00b61`; source SHA-256 `a5bc7d153af669d5a03dc4e68e89ed88159ad0d265f17c2064a1f07733235391`. Schema và config đều đã xác minh.
+- Rubric v1.1 định nghĩa coverage theo từng chủ đề được hỏi: phải trả lời rõ hoặc nói rõ là nguồn không xác định; chỉ nói “immediately” không tự động trả lời điều kiện approval/eligibility. Policy này được dùng chung trong leader prompt và validator grounding. Fixture timing-omission cũ được giữ nguyên để test, không sửa cho dễ pass.
+- Ma trận thật trên StudioNet đạt **16/16 case**. Ba ca lõi a-fault, b-fault, no-fault đều đạt ba lần lặp liên tiếp; các ca timing-omission, both-fault, missing-data, source-duty, tail-injection và conflicting-source đều đạt. Manifest có **113/113 step `FINALIZED_SUCCESS`**: một deploy và bảy giao dịch cho mỗi case. Xem `reports/studionet-sep07probe/`.
+- Full React/provider happy path đạt: job `work-69d379f8`, bảy giao dịch create → accept A/B → submit A/B → request review → resolve đều `FINALIZED_SUCCESS`; trạng thái cuối `RESOLVED`, A/B cùng `SATISFIED`. Xem `reports/frontend-live/`. Test dùng component/form thật và provider request thật với ví StudioNet cô lập; không phải chứng nhận MetaMask/Snap của người dùng.
+- Gate local đạt ngày 08/09: GenVM lint 3/3 (chỉ cảnh báo có runner mới hơn; giữ pin đã review), 92 direct/adversarial tests, 64 frontend tests + 2 receipt tests, TypeScript test compile, production build, npm audit 0 lỗ hổng đã biết. Bundle còn cảnh báo 759.57 kB.
+- Lỗi RPC thoáng qua trong polling được phục hồi bằng hash đã persist; runner không tự gửi lại transaction không chắc chắn. Toàn bộ failure v1.0 và run v1.1 cũ bị kẹt được giữ lại, không xóa để làm đẹp kết quả.
+- Submission draft và logo 512×512 đã có trong `submission/`. Chưa public website, chưa deploy Bradbury, chưa xác minh external EOA child transfer và chưa nộp portal.
+- Việc tiếp theo: review/commit/push release candidate; trình kết quả cho người dùng. Chỉ sau khi người dùng xác nhận rõ mới deploy Bradbury theo gate `AGENTS.md`. Sau Bradbury phải chạy smoke workflow và xác minh child transfer đến EOA trước khi ghi “payment verified”; rồi mới cấu hình frontend vào Bradbury, publish Sites, kiểm tra URL công khai và bàn giao bộ submission để người dùng tự nộp.
+
 ## Mốc mới nhất — đọc phần này trước lịch sử bên dưới
 
 Người dùng đã yêu cầu tiếp tục xây dựng. Repo public đã có tại https://github.com/tanphung/tasktrace, baseline trước phiên này là `ca63b99`. Không còn ở trạng thái tạm dừng ngày 05/09.

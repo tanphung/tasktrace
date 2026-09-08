@@ -8,10 +8,12 @@ export interface Artifact {
 }
 export interface Citation {chunk_id:string;quote:string;start_byte:number;end_byte:number;chunk_sha256:string}
 export interface Assessment {obligation_id:string;status:Outcome;reason:string;citations:Citation[]}
+export interface Obligation {id:string;stage:'A'|'B';rule:string;evidence_roles:string[]}
 export interface Job {
   id:string;client:string;workers:{A:string;B:string};status:string;terms_hash:string;
   chain_id:string;contract:string;accepted:{A:boolean;B:boolean};b_missing:boolean;
-  terms:{title:string;task:string;verify_source:boolean;money:Record<'A'|'B',{fee:string;bond:string;penalty:string}>;step_seconds:number;review_seconds:number;adjudication_seconds:number};
+  terms:{version:string;title:string;task:string;verify_source:boolean;money:Record<'A'|'B',{fee:string;bond:string;penalty:string}>;accept_seconds:number;step_seconds:number;review_seconds:number;adjudication_seconds:number};
+  obligations?:Obligation[];
   artifacts:Partial<Record<'SOURCE'|'A'|'B',Artifact>>;
   created_at:number;accept_deadline:number;a_deadline?:number;b_deadline?:number;review_deadline?:number;adjudication_deadline?:number;
   outcomes?:{A:Outcome;B:Outcome};settlement_reason?:string;resolved_at?:number;

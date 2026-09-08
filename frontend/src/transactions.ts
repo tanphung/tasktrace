@@ -23,7 +23,7 @@ function save(record:TxRecord){
 }
 export function injected():Provider {
   const provider=(window as unknown as {ethereum?:Provider}).ethereum;
-  if(!provider?.request)throw new Error('Open this page in a browser with an EIP-1193 wallet, such as MetaMask. Never paste a private key here.');
+  if(!provider?.request)throw new Error('Open this page in MetaMask with the GenLayer Wallet Snap. Never paste a private key here.');
   return provider;
 }
 export async function connect():Promise<Address>{
@@ -31,10 +31,24 @@ export async function connect():Promise<Address>{
   const accounts=await provider.request({method:'eth_requestAccounts'}) as Address[];
   if(!accounts?.[0])throw new Error('No wallet account selected');
   const client=createClient({chain,account:accounts[0],provider});
-  await client.connect(chain.id===61999?'studionet':'testnetBradbury');
+  try{await client.connect(chain.id===61999?'studionet':'testnetBradbury');}
+  catch(error){
+    const message=error instanceof Error?error.message:String(error);
+    if(/wallet_(?:get|request)Snaps/i.test(message))throw new Error('This GenLayer wallet flow requires MetaMask and the GenLayer Wallet Snap. Approve the Snap request, then reconnect.');
+    throw error;
+  }
   const actual=await provider.request({method:'eth_chainId'});
   if(Number(actual)!==chain.id)throw new Error(`Switch your wallet to ${chain.name}`);
+  const current=await provider.request({method:'eth_accounts'}) as Address[];
+  if(current?.[0]?.toLowerCase()!==accounts[0].toLowerCase())throw new Error('Wallet account changed during connection. Connect again.');
   return accounts[0];
+}
+export function watchWallet(invalidate:()=>void):()=>void {
+  const provider=injected() as Provider & {on?:(event:string,listener:()=>void)=>unknown;removeListener?:(event:string,listener:()=>void)=>unknown};
+  if(!provider.on||!provider.removeListener)return ()=>{};
+  const events=['accountsChanged','chainChanged','disconnect'];
+  for(const event of events)provider.on(event,invalidate);
+  return ()=>{for(const event of events)provider.removeListener?.(event,invalidate);};
 }
 const methods=new Set(['create_job','accept_job','cancel_job','submit_work','approve_work','request_review','resolve_review','advance_timeout','claim']);
 export async function submit(account:Address,jobId:string,method:string,args:CalldataEncodable[],value=0n):Promise<TxRecord>{

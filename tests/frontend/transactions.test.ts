@@ -1,6 +1,6 @@
 import {beforeEach,describe,it,expect,vi} from 'vitest';
 import {chain,contract,readClient} from '../../frontend/src/client';
-import {connect,history,historyKey,observe,pending,receiptPhase,submit,assertReceiptMatches,recoverHash,type TxRecord} from '../../frontend/src/transactions';
+import {connect,history,historyKey,observe,pending,receiptPhase,submit,assertReceiptMatches,recoverHash,watchWallet,type TxRecord} from '../../frontend/src/transactions';
 import {abi} from 'genlayer-js';
 import * as clientModule from '../../frontend/src/client';
 import {jobFixture} from './fixtures';
@@ -12,11 +12,22 @@ const record=():TxRecord=>({id:'test-tx',jobId:'test-job',method:'request_review
 const matchedReceipt=()=>({hash,from_address:account,to_address:contract,data:{calldata:{raw:Array.from(abi.calldata.encode(new Map([['method','request_review'],['args',['test-job']]] as [string,any][])))}}});
 beforeEach(()=>{
   vi.clearAllMocks();mocks.connect.mockResolvedValue(undefined);mocks.write.mockResolvedValue(hash);
-  mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?'0xf22f':[account]);
+  mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?'0xf22f':method==='wallet_getSnaps'?{'npm:genlayer-wallet-plugin':{id:'npm:genlayer-wallet-plugin'}}:[account]);
   Object.defineProperty(window,'ethereum',{value:{request:mocks.request},configurable:true});
   Object.defineProperty(navigator,'locks',{value:{request:async(_name:unknown,_opts:unknown,callback:(lock:object)=>unknown)=>callback({name:'test-lock'})},configurable:true});
 });
 describe('transaction safety',()=>{
+  it('invalidates wallet state on account, chain and disconnect events and removes listeners',()=>{
+    const listeners=new Map<string,()=>void>();const invalidate=vi.fn();
+    Object.defineProperty(window,'ethereum',{value:{request:mocks.request,on:(event:string,fn:()=>void)=>listeners.set(event,fn),removeListener:(event:string,fn:()=>void)=>{if(listeners.get(event)===fn)listeners.delete(event);}},configurable:true});
+    const cleanup=watchWallet(invalidate);expect(listeners.size).toBe(3);
+    for(const event of ['accountsChanged','chainChanged','disconnect'])listeners.get(event)!();
+    expect(invalidate).toHaveBeenCalledTimes(3);cleanup();expect(listeners.size).toBe(0);
+  });
+  it('rejects accounts changed during the connect flow',async()=>{
+    mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?'0xf22f':method==='eth_requestAccounts'?[account]:['0x3333333333333333333333333333333333333333']);
+    await expect(connect()).rejects.toThrow('during connection');
+  });
   it('does not mark finalized execution successful until expected state is observable',async()=>{
     const item=record();localStorage.setItem(historyKey,JSON.stringify([item]));
     vi.mocked(readClient.getTransaction).mockResolvedValue({...matchedReceipt(),status:'FINALIZED',tx_execution_result_name:'FINISHED_WITH_RETURN'} as never);

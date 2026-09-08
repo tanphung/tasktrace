@@ -4,6 +4,43 @@ import json
 import pytest
 
 
+def test_shared_coverage_policy_reaches_derivation_and_grounding(system, monkeypatch):
+    system.ready()
+    candidate = system.response()
+    prompts = []
+    def prompt(text, **kwargs):
+        prompts.append(text)
+        return {"supported": True} if "TASKTRACE_GROUNDING_V1" in text else candidate
+    monkeypatch.setattr(system.m.gl.nondet, "exec_prompt", prompt)
+    assert system.m._validate_leader(system.snapshot(), system.m.gl.vm.Return(candidate)) is True
+    assert len(prompts) == 2
+    assert all(system.m.COVERAGE_POLICY in text for text in prompts)
+    assert "Do not infer absence of a prerequisite" in system.m.COVERAGE_POLICY
+
+
+def test_coverage_disagreement_still_rejects_before_grounding(system, monkeypatch):
+    system.ready()
+    candidate = system.response()
+    independent = copy.deepcopy(candidate)
+    independent["assessments"][1]["status"] = "VIOLATED"
+    calls = []
+    def prompt(text, **kwargs):
+        calls.append(text)
+        return independent
+    monkeypatch.setattr(system.m.gl.nondet, "exec_prompt", prompt)
+    assert system.m._validate_leader(system.snapshot(), system.m.gl.vm.Return(candidate)) is False
+    assert len(calls) == 1
+
+
+def test_grounding_can_reject_matching_coverage_labels(system, monkeypatch):
+    system.ready()
+    candidate = system.response()
+    def prompt(text, **kwargs):
+        return {"supported": False} if "TASKTRACE_GROUNDING_V1" in text else candidate
+    monkeypatch.setattr(system.m.gl.nondet, "exec_prompt", prompt)
+    assert system.m._validate_leader(system.snapshot(), system.m.gl.vm.Return(candidate)) is False
+
+
 @pytest.mark.parametrize("index", range(5))
 @pytest.mark.parametrize("status", ["SATISFIED", "VIOLATED"])
 @pytest.mark.parametrize("removed_role", [0, 1])

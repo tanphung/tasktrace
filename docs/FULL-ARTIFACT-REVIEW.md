@@ -1,5 +1,9 @@
 # TaskTrace — Chiến lược đọc đủ artifact v0.2
 
+## Addendum v0.4 — shared reviewer rubric
+
+Use one shared coverage-policy string in derivation and grounding so that two prompts cannot accidentally apply different standards. Review every requested topic, including the final topic; require explicit content or an explicit unknown statement, allowing semantic paraphrases. A timing statement alone is not an answer about authorization/eligibility/cost prerequisites. Keep complete immutable snapshots, independent derivation, exact per-obligation status comparison, and evidence-grounding verification.
+
 ## Addendum v0.3 — bounded regeneration
 
 Mỗi derive xác minh snapshot trước khi gọi LLM; cả lần đầu và lần tạo lại tối đa một lần đều nhận đầy đủ cùng ordered chunks. Chỉ lỗi schema/citation `[LLM_ERROR]` mới cho phép regenerate, không bắt hoặc che deterministic hash/provenance failures. Không ghép citation tự động, không sửa status bằng code, không cắt artifact hay response để parser cho qua. Validator vẫn tự derive rồi so sánh từng obligation status và kiểm tra grounding của leader. Tất cả state/ledger effects chỉ chạy sau consensus.

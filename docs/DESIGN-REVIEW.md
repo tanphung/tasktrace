@@ -42,3 +42,6 @@ Canonical provenance của bản đầu là chain/contract/job/stage/revision/se
 Tự rà soát tài liệu không thay audit hoặc test. Bản kế hoạch không tự chứng nhận rằng các cổng kỹ thuật đã qua.
 
 Lượt lập kế hoạch: không deploy contract, không ký giao dịch, không đổi tên thư mục hoặc sửa .env. User đã cho phép dùng khóa testnet để thực hiện dự án khi chốt ý tưởng; phần xác minh test và quyền tài khoản thực tế vẫn cần hoàn thành.
+# Review addendum v0.4 — 06/09/2026
+
+Self-review before code (not independent audit): compared the failed v1.0 round candidates against the approved requirement that B flag missing information. Clarify explicit coverage in both prompts, bump terms version, retain per-obligation independent comparison, and preserve the exact ambiguous fixture and all historical failures. No change to funds, role authorization, provenance, or full-byte review. Risks: models can still violate the clarified rubric; live stability and adversarial gates remain mandatory and are not yet satisfied.

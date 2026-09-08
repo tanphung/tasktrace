@@ -1,0 +1,247 @@
+{
+  "a_deadline": 1788882597,
+  "accept_deadline": 1788882500,
+  "accepted": {
+    "A": true,
+    "B": true
+  },
+  "adjudication_deadline": 1788882758,
+  "artifacts": {
+    "A": {
+      "byte_length": 75,
+      "chain_id": "61999",
+      "content": "Trial accounts cannot export. Paid accounts may export only after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+      "job_id": "work-69d379f8",
+      "revision": 1,
+      "role": "A",
+      "sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+      "submission_id": "577b920b09502d069560d8663d9e6553808ff70e8dc6b1efffa124d8d5e5b2c9",
+      "upstream": "ed2c012466300803fe710699850b47a88042a207e380137955aaed84f12c5039"
+    },
+    "B": {
+      "byte_length": 75,
+      "chain_id": "61999",
+      "content": "Trial accounts cannot export. Paid accounts may export only after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x808a7d4d39105264570bd993574d4b1075f69874",
+      "job_id": "work-69d379f8",
+      "revision": 1,
+      "role": "B",
+      "sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+      "submission_id": "98b9438107795302f8e5dcd7e820fecfc238be9ad6c48f9cb89687ee03d8001a",
+      "upstream": "577b920b09502d069560d8663d9e6553808ff70e8dc6b1efffa124d8d5e5b2c9"
+    },
+    "SOURCE": {
+      "byte_length": 96,
+      "chain_id": "61999",
+      "content": "Export requires approval. Trial accounts cannot export. Paid accounts may export after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+      "job_id": "work-69d379f8",
+      "revision": 1,
+      "role": "SOURCE",
+      "sha256": "117daf9fe12ce2cd0fc8e9effab7c273adbe9ca1aa2c6db5dd9c0a34ac50dfd8",
+      "submission_id": "ed2c012466300803fe710699850b47a88042a207e380137955aaed84f12c5039",
+      "upstream": ""
+    }
+  },
+  "b_deadline": 1788882649,
+  "b_missing": false,
+  "chain_id": "61999",
+  "claims": {},
+  "client": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+  "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+  "created_at": 1788796100,
+  "id": "work-69d379f8",
+  "ledger": {
+    "credits": {
+      "A": "15",
+      "B": "27",
+      "CLIENT": "0"
+    },
+    "emitted": "0",
+    "issued": "42",
+    "received": "42"
+  },
+  "outcomes": {
+    "A": "SATISFIED",
+    "B": "SATISFIED"
+  },
+  "resolved_at": 1788796410,
+  "review": {
+    "result": {
+      "assessments": [
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "117daf9fe12ce2cd0fc8e9effab7c273adbe9ca1aa2c6db5dd9c0a34ac50dfd8",
+              "end_byte": 96,
+              "quote": "Trial accounts cannot export. Paid accounts may export after approval.",
+              "start_byte": 26
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+              "end_byte": 75,
+              "quote": "Trial accounts cannot export. Paid accounts may export only after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "A_MEANING",
+          "reason": "A preserves the source meaning: trial accounts cannot export, and paid accounts may export only with approval.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "117daf9fe12ce2cd0fc8e9effab7c273adbe9ca1aa2c6db5dd9c0a34ac50dfd8",
+              "end_byte": 96,
+              "quote": "Export requires approval. Trial accounts cannot export. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+              "end_byte": 75,
+              "quote": "Trial accounts cannot export. Paid accounts may export only after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "A_COVERAGE",
+          "reason": "The task asks about trial export, paid export, and whether approval is needed. A explicitly answers all requested topics.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+              "end_byte": 75,
+              "quote": "Trial accounts cannot export. Paid accounts may export only after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+              "end_byte": 75,
+              "quote": "Trial accounts cannot export. Paid accounts may export only after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_FAITHFULNESS",
+          "reason": "B matches A's handoff without adding or changing conditions.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+              "end_byte": 75,
+              "quote": "Trial accounts cannot export. Paid accounts may export only after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "092224173dc8c9aaf2285aae864028db99fe8e9d71fa237c2a7e3655990a065f",
+              "end_byte": 75,
+              "quote": "Trial accounts cannot export. Paid accounts may export only after approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_COVERAGE",
+          "reason": "B explicitly answers the requested topics from A: trial accounts cannot export, paid accounts may export, and approval is needed for paid export.",
+          "status": "SATISFIED"
+        }
+      ],
+      "reviewed_chunks": [
+        "SOURCE:1:0",
+        "A:1:0",
+        "B:1:0"
+      ]
+    },
+    "reviewed_at": 1788796410,
+    "snapshot_sha256": "edc12a305aebbc139dc5fa1f759e3c2caa386aa02084dd6cb1dd343b0d9b19b0",
+    "terms_hash": "9933329efbb666f5cad42c9bcecd1d48492f25731c346f957a7da76ff57e2857"
+  },
+  "review_deadline": 1788882712,
+  "settlement_reason": "GENLAYER_REVIEW",
+  "status": "RESOLVED",
+  "terms": {
+    "accept_seconds": 86400,
+    "adjudication_seconds": 86400,
+    "money": {
+      "A": {
+        "bond": "5",
+        "fee": "10",
+        "penalty": "3"
+      },
+      "B": {
+        "bond": "7",
+        "fee": "20",
+        "penalty": "4"
+      }
+    },
+    "neutral_unwind": true,
+    "review_seconds": 86400,
+    "step_seconds": 86400,
+    "task": "Explain whether trial and paid accounts can export, and whether approval is needed.",
+    "title": "Export policy report",
+    "undisputed_timeout_accepts": true,
+    "verify_source": false,
+    "version": "tasktrace-1.1"
+  },
+  "terms_hash": "9933329efbb666f5cad42c9bcecd1d48492f25731c346f957a7da76ff57e2857",
+  "workers": {
+    "A": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+    "B": "0x808a7d4d39105264570bd993574d4b1075f69874"
+  },
+  "obligations": [
+    {
+      "evidence_roles": [
+        "SOURCE",
+        "A"
+      ],
+      "id": "A_MEANING",
+      "rule": "Preserve the meaning, conditions and exceptions of source facts relevant to the task. Do not invent facts.",
+      "stage": "A"
+    },
+    {
+      "evidence_roles": [
+        "SOURCE",
+        "A"
+      ],
+      "id": "A_COVERAGE",
+      "rule": "Explicitly answer every topic requested in the task or explicitly state it is unknown. Timing alone does not answer independent prerequisites. An incorrect explicit answer still covers its topic; correctness is judged ONLY under A_MEANING.",
+      "stage": "A"
+    },
+    {
+      "evidence_roles": [
+        "A",
+        "B"
+      ],
+      "id": "B_FAITHFULNESS",
+      "rule": "Report faithfully from A's handoff, preserving its conditions and exceptions. Do not introduce unsupported claims. An error inherited faithfully from A is NOT itself a B violation.",
+      "stage": "B"
+    },
+    {
+      "evidence_roles": [
+        "A",
+        "B"
+      ],
+      "id": "B_COVERAGE",
+      "rule": "Explicitly answer every topic requested in the task or explicitly flag it as unknown/missing from A. Timing alone does not answer independent prerequisites. An inherited explicit incorrect answer still covers its topic; silently inheriting a missing requested answer violates this duty. Correctness is judged under B_FAITHFULNESS and optional B_SOURCE.",
+      "stage": "B"
+    }
+  ]
+}

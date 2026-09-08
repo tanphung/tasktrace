@@ -1,0 +1,209 @@
+{
+  "a_deadline": 1788966467,
+  "accept_deadline": 1788966374,
+  "accepted": {
+    "A": true,
+    "B": true
+  },
+  "adjudication_deadline": 1788966585,
+  "artifacts": {
+    "A": {
+      "byte_length": 200,
+      "chain_id": "61999",
+      "content": "The source conflicts about trial export: one section permits it without approval and another forbids it, with no precedence rule. Trial eligibility cannot be determined. Paid export requires approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+      "job_id": "conflicting-source-edge-1-a5bc7d15",
+      "revision": 1,
+      "role": "A",
+      "sha256": "65d89bc4b6cf4284707a7ad1f8315b6f81cb9db1eed6ef4c7ab0da7078a81407",
+      "submission_id": "bdd8d8024221293938ce3c25aef0f8342876d7053b6552bc1600dbd7490956f3",
+      "upstream": "1f89979ef01d64da862638ea4653e3597386e56292a2132b231442e161e3a319"
+    },
+    "B": {
+      "byte_length": 109,
+      "chain_id": "61999",
+      "content": "Trial eligibility cannot be determined because the reference policy conflicts. Paid export requires approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x808a7d4d39105264570bd993574d4b1075f69874",
+      "job_id": "conflicting-source-edge-1-a5bc7d15",
+      "revision": 1,
+      "role": "B",
+      "sha256": "1bd041e4b5dd19db12ccb5547609edb97e33f0f14b689160cc01ddd1cff8bc69",
+      "submission_id": "8ac19239e1d2c6b0b54d047d4b201190f486469c2af8403cd68ed2254611a9e6",
+      "upstream": "bdd8d8024221293938ce3c25aef0f8342876d7053b6552bc1600dbd7490956f3"
+    },
+    "SOURCE": {
+      "byte_length": 207,
+      "chain_id": "61999",
+      "content": "Policy section 1: trial accounts can export without approval. Policy section 2: trial accounts cannot export. Both sections have the same date and no precedence rule. Paid accounts may export after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+      "job_id": "conflicting-source-edge-1-a5bc7d15",
+      "revision": 1,
+      "role": "SOURCE",
+      "sha256": "3330ad913e496d0eb742c1c742043b01cd40e462bbccbdbc6a2aa25df58913e4",
+      "submission_id": "1f89979ef01d64da862638ea4653e3597386e56292a2132b231442e161e3a319",
+      "upstream": ""
+    }
+  },
+  "b_deadline": 1788966508,
+  "b_missing": false,
+  "chain_id": "61999",
+  "claims": {},
+  "client": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+  "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+  "created_at": 1788879974,
+  "id": "conflicting-source-edge-1-a5bc7d15",
+  "ledger": {
+    "credits": {
+      "A": "15",
+      "B": "27",
+      "CLIENT": "0"
+    },
+    "emitted": "0",
+    "issued": "42",
+    "received": "42"
+  },
+  "outcomes": {
+    "A": "SATISFIED",
+    "B": "SATISFIED"
+  },
+  "resolved_at": 1788880228,
+  "review": {
+    "result": {
+      "assessments": [
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "3330ad913e496d0eb742c1c742043b01cd40e462bbccbdbc6a2aa25df58913e4",
+              "end_byte": 109,
+              "quote": "trial accounts can export without approval. Policy section 2: trial accounts cannot export.",
+              "start_byte": 18
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "65d89bc4b6cf4284707a7ad1f8315b6f81cb9db1eed6ef4c7ab0da7078a81407",
+              "end_byte": 129,
+              "quote": "one section permits it without approval and another forbids it, with no precedence rule.",
+              "start_byte": 41
+            }
+          ],
+          "obligation_id": "A_MEANING",
+          "reason": "A correctly identifies the internal contradiction in the source regarding trial accounts and the requirement for paid accounts.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "3330ad913e496d0eb742c1c742043b01cd40e462bbccbdbc6a2aa25df58913e4",
+              "end_byte": 207,
+              "quote": "Paid accounts may export after approval.",
+              "start_byte": 167
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "65d89bc4b6cf4284707a7ad1f8315b6f81cb9db1eed6ef4c7ab0da7078a81407",
+              "end_byte": 200,
+              "quote": "Trial eligibility cannot be determined. Paid export requires approval.",
+              "start_byte": 130
+            }
+          ],
+          "obligation_id": "A_COVERAGE",
+          "reason": "A addresses both trial and paid accounts and the approval requirement for each as requested.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "65d89bc4b6cf4284707a7ad1f8315b6f81cb9db1eed6ef4c7ab0da7078a81407",
+              "end_byte": 200,
+              "quote": "Trial eligibility cannot be determined. Paid export requires approval.",
+              "start_byte": 130
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "1bd041e4b5dd19db12ccb5547609edb97e33f0f14b689160cc01ddd1cff8bc69",
+              "end_byte": 109,
+              "quote": "Trial eligibility cannot be determined because the reference policy conflicts. Paid export requires approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_FAITHFULNESS",
+          "reason": "B accurately reflects A's conclusion that trial status is indeterminate and paid status requires approval.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "65d89bc4b6cf4284707a7ad1f8315b6f81cb9db1eed6ef4c7ab0da7078a81407",
+              "end_byte": 200,
+              "quote": "Trial eligibility cannot be determined. Paid export requires approval.",
+              "start_byte": 130
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "1bd041e4b5dd19db12ccb5547609edb97e33f0f14b689160cc01ddd1cff8bc69",
+              "end_byte": 109,
+              "quote": "Trial eligibility cannot be determined because the reference policy conflicts. Paid export requires approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_COVERAGE",
+          "reason": "B covers both account types and the approval prerequisite as provided in A's handoff.",
+          "status": "SATISFIED"
+        }
+      ],
+      "reviewed_chunks": [
+        "SOURCE:1:0",
+        "A:1:0",
+        "B:1:0"
+      ]
+    },
+    "reviewed_at": 1788880228,
+    "snapshot_sha256": "cb5363c6094b9bf19a217fc9dbbe24ea44a7702bfcf5b58c0e44a0eaa0831bd4",
+    "terms_hash": "dd86b5ee7783c8379a4c2b0c9a7547324689a50762c0d4418de9ece86b9a194e"
+  },
+  "review_deadline": 1788966547,
+  "settlement_reason": "GENLAYER_REVIEW",
+  "status": "RESOLVED",
+  "terms": {
+    "accept_seconds": 86400,
+    "adjudication_seconds": 86400,
+    "money": {
+      "A": {
+        "bond": "5",
+        "fee": "10",
+        "penalty": "3"
+      },
+      "B": {
+        "bond": "7",
+        "fee": "20",
+        "penalty": "4"
+      }
+    },
+    "neutral_unwind": true,
+    "review_seconds": 86400,
+    "step_seconds": 86400,
+    "task": "Explain whether trial and paid accounts can export, and whether approval is needed.",
+    "title": "The source itself contains a conflict",
+    "undisputed_timeout_accepts": true,
+    "verify_source": false,
+    "version": "tasktrace-1.1"
+  },
+  "terms_hash": "dd86b5ee7783c8379a4c2b0c9a7547324689a50762c0d4418de9ece86b9a194e",
+  "workers": {
+    "A": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+    "B": "0x808a7d4d39105264570bd993574d4b1075f69874"
+  }
+}

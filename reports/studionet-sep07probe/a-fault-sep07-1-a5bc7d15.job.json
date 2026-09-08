@@ -1,0 +1,209 @@
+{
+  "a_deadline": 1788876849,
+  "accept_deadline": 1788876769,
+  "accepted": {
+    "A": true,
+    "B": true
+  },
+  "adjudication_deadline": 1788876972,
+  "artifacts": {
+    "A": {
+      "byte_length": 86,
+      "chain_id": "61999",
+      "content": "Trial accounts can export without approval. Paid accounts can export without approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+      "job_id": "a-fault-sep07-1-a5bc7d15",
+      "revision": 1,
+      "role": "A",
+      "sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+      "submission_id": "63a6df173f297508f7603a484e336ee3514e87616b10f739e792ed721877201c",
+      "upstream": "9eb76fcd3d7003f2b3ba57a1861fb685699e039dca8fb69de4ebb604a45ace7f"
+    },
+    "B": {
+      "byte_length": 86,
+      "chain_id": "61999",
+      "content": "Trial accounts can export without approval. Paid accounts can export without approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0x808a7d4d39105264570bd993574d4b1075f69874",
+      "job_id": "a-fault-sep07-1-a5bc7d15",
+      "revision": 1,
+      "role": "B",
+      "sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+      "submission_id": "18438269608684e389ae8f3aeefa8123ac7f11d49da05e4eadfba79a0b07d64b",
+      "upstream": "63a6df173f297508f7603a484e336ee3514e87616b10f739e792ed721877201c"
+    },
+    "SOURCE": {
+      "byte_length": 96,
+      "chain_id": "61999",
+      "content": "Export requires approval. Trial accounts cannot export. Paid accounts may export after approval.",
+      "content_type": "text/plain",
+      "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+      "encoding": "utf-8",
+      "issuer": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+      "job_id": "a-fault-sep07-1-a5bc7d15",
+      "revision": 1,
+      "role": "SOURCE",
+      "sha256": "117daf9fe12ce2cd0fc8e9effab7c273adbe9ca1aa2c6db5dd9c0a34ac50dfd8",
+      "submission_id": "9eb76fcd3d7003f2b3ba57a1861fb685699e039dca8fb69de4ebb604a45ace7f",
+      "upstream": ""
+    }
+  },
+  "b_deadline": 1788876887,
+  "b_missing": false,
+  "chain_id": "61999",
+  "claims": {},
+  "client": "0xdD512b9C9E642162332533C56498B6455d8EA4Fe",
+  "contract": "0x8128cD94346c94fe1FF20204d54a4B980Ae00b61",
+  "created_at": 1788790369,
+  "id": "a-fault-sep07-1-a5bc7d15",
+  "ledger": {
+    "credits": {
+      "A": "2",
+      "B": "27",
+      "CLIENT": "13"
+    },
+    "emitted": "0",
+    "issued": "42",
+    "received": "42"
+  },
+  "outcomes": {
+    "A": "VIOLATED",
+    "B": "SATISFIED"
+  },
+  "resolved_at": 1788790614,
+  "review": {
+    "result": {
+      "assessments": [
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "117daf9fe12ce2cd0fc8e9effab7c273adbe9ca1aa2c6db5dd9c0a34ac50dfd8",
+              "end_byte": 96,
+              "quote": "Export requires approval. Trial accounts cannot export. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+              "end_byte": 86,
+              "quote": "Trial accounts can export without approval. Paid accounts can export without approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "A_MEANING",
+          "reason": "A inverts the source conditions: source says export requires approval and trial accounts cannot export while paid accounts may export after approval; A states both account types can export without approval.",
+          "status": "VIOLATED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "SOURCE:1:0",
+              "chunk_sha256": "117daf9fe12ce2cd0fc8e9effab7c273adbe9ca1aa2c6db5dd9c0a34ac50dfd8",
+              "end_byte": 96,
+              "quote": "Export requires approval. Trial accounts cannot export. Paid accounts may export after approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+              "end_byte": 86,
+              "quote": "Trial accounts can export without approval. Paid accounts can export without approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "A_COVERAGE",
+          "reason": "A explicitly addresses all requested topics: whether trial accounts can export, whether paid accounts can export, and whether approval is needed. The answers are incorrect but coverage is complete.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+              "end_byte": 86,
+              "quote": "Trial accounts can export without approval. Paid accounts can export without approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+              "end_byte": 86,
+              "quote": "Trial accounts can export without approval. Paid accounts can export without approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_FAITHFULNESS",
+          "reason": "B faithfully reports A's handoff verbatim; no new claims are introduced and A's error is inherited unchanged.",
+          "status": "SATISFIED"
+        },
+        {
+          "citations": [
+            {
+              "chunk_id": "A:1:0",
+              "chunk_sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+              "end_byte": 86,
+              "quote": "Trial accounts can export without approval. Paid accounts can export without approval.",
+              "start_byte": 0
+            },
+            {
+              "chunk_id": "B:1:0",
+              "chunk_sha256": "0d4c04fcf6fd91501676fb048039585b4bc70a597e1c6d9b73cbc40e8cdc8aa4",
+              "end_byte": 86,
+              "quote": "Trial accounts can export without approval. Paid accounts can export without approval.",
+              "start_byte": 0
+            }
+          ],
+          "obligation_id": "B_COVERAGE",
+          "reason": "B explicitly covers all requested topics from A's handoff: trial export, paid export, and approval requirement. B does not silently omit any requested topic.",
+          "status": "SATISFIED"
+        }
+      ],
+      "reviewed_chunks": [
+        "SOURCE:1:0",
+        "A:1:0",
+        "B:1:0"
+      ]
+    },
+    "reviewed_at": 1788790614,
+    "snapshot_sha256": "8aa7394ed10f7f8df1870c9d08b7e6da27dd701a12fda580f521de8f75b3a4ef",
+    "terms_hash": "52cd6cfbb23d62f518b8fdc29747aeaa43e071010bfd809801a7323c0dda05c9"
+  },
+  "review_deadline": 1788876929,
+  "settlement_reason": "GENLAYER_REVIEW",
+  "status": "RESOLVED",
+  "terms": {
+    "accept_seconds": 86400,
+    "adjudication_seconds": 86400,
+    "money": {
+      "A": {
+        "bond": "5",
+        "fee": "10",
+        "penalty": "3"
+      },
+      "B": {
+        "bond": "7",
+        "fee": "20",
+        "penalty": "4"
+      }
+    },
+    "neutral_unwind": true,
+    "review_seconds": 86400,
+    "step_seconds": 86400,
+    "task": "Explain whether trial and paid accounts can export, and whether approval is needed.",
+    "title": "The error started at extraction",
+    "undisputed_timeout_accepts": true,
+    "verify_source": false,
+    "version": "tasktrace-1.1"
+  },
+  "terms_hash": "52cd6cfbb23d62f518b8fdc29747aeaa43e071010bfd809801a7323c0dda05c9",
+  "workers": {
+    "A": "0x79A150Fd267F2cd1395cb15CF35815093C0D1598",
+    "B": "0x808a7d4d39105264570bd993574d4b1075f69874"
+  }
+}

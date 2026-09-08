@@ -2,7 +2,7 @@
 
 Accountability for two-stage work handoffs, with evidence-based adjudication on GenLayer.
 
-**Development checkpoint — not submission-ready, not audited, and not deployed to Bradbury.**
+**Verified StudioNet release candidate — not audited, not deployed to Bradbury, and not submitted.**
 
 Intended Agent Tank hackathon track: **Future of Work**. The project is not an approved or submitted hackathon entry yet.
 
@@ -22,29 +22,30 @@ For each stage, fee `F`, bond `B`, and maximum penalty `P <= B` are agreed upfro
 
 Credits and emitted payment messages are **not** proof of a completed recipient payment.
 
-## What exists at this checkpoint
+## Verified release-candidate status
 
 - A pinned-runner Python Intelligent Contract with authorization, immutable handoffs, bounded full-text evidence, custom validator checks, deterministic credits, deadlines, and claims.
-- 81 passing direct/adversarial tests, using controlled LLM mocks; these do not prove live AI accuracy.
-- 50 passing frontend tests and two receipt-decoder unit tests (`npm test`); these are not live network integration tests.
-- A real StudioNet deployment with schema/config checks and three first-pass core adjudications, verified against finalized receipts and resulting credits.
-- A React workspace with wallet actions, job creation, complete evidence/citations, role restrictions, deadlines, and persistent transaction tracking. Desktop/mobile read flows were checked in a browser; positive browser-wallet signing and automated agent execution remain unverified/unimplemented respectively.
+- 92 passing direct/adversarial tests using controlled LLM mocks; these test contract logic but do not substitute for live consensus.
+- 64 passing frontend tests and two receipt-decoder tests (`npm test`), plus a separate full React-form/provider test against finalized StudioNet state.
+- A real StudioNet v1.1 deployment with verified schema/config and **16/16 live adjudication cases passing**. The core A-fault, B-fault, and no-fault cases each passed three consecutive repetitions. Adversarial cases cover timing omission, both workers at fault, honest uncertainty, optional source-verification duty, tail-chunk prompt injection, and a conflicting reference source.
+- 113/113 tracked integration steps are `FINALIZED_SUCCESS`: one deployment plus seven lifecycle transactions for each of 16 cases. Raw receipts and resulting jobs are preserved.
+- A React workspace with wallet actions, job creation, complete evidence/citations, role restrictions, deadlines, deterministic ledger checks, immutable-term verification, and persisted transaction tracking. The installed GenLayerJS version connects browser wallets through MetaMask's GenLayer Wallet Snap; the UI names this requirement.
+- A full happy-path test used the actual React forms and application provider requests to create, accept, submit, request review, and resolve a StudioNet job with three isolated test accounts. All seven transaction records are `FINALIZED_SUCCESS`; the resulting job is `RESOLVED` with both roles `SATISFIED`. This validates application wiring and real network writes, but it is not certification of a user's MetaMask/Snap installation.
 - TypeScript/Vite production build passes; bundle-size warning remains. The checkpoint dependency audit reports zero known npm vulnerabilities (not a security audit).
-- Design/security documents, eight prepared test fixtures, a resumable StudioNet runner, and preserved raw receipts including the failed run.
+- Design/security documents, nine prepared fixtures, a resumable no-auto-resend StudioNet runner, and preserved historical failures that motivated the v1.1 coverage policy.
 
-**Known blocker:** three core cases passed once, but the second A-fault repetition ended `UNDETERMINED` after three leader rotations. Historical leader candidates disagree about whether “immediately” covers the requested approval topic. The exact rejection branch inside each validator is not exposed by these receipts. Reliability is not proven. Strict citations and independent verification remain enabled; all failures are preserved, including the earlier malformed-citation run.
-
-No Bradbury transaction or verified recipient payout has been performed. No public website has been deployed. A static hosting project is reserved; it is not a live demo.
+No Bradbury transaction or verified external-recipient payout has been performed. StudioNet has no EVM layer, so an emitted claim message is deliberately not displayed as recipient payment proof. No public website has been deployed. A static hosting project is reserved; it is not a live demo.
 
 ## StudioNet evidence
 
 - Chain: `61999` (StudioNet only).
-- Contract: `0x7df6bD92CEe3c7ABfD2CBc0c14B64f7dce8E7f72`.
-- Deployment transaction: `0xc4cd6a4c06b012c76b1da0cb35f62e2c26f44fd0ef62b06e1c4db8b81a298f6d`.
-- Failed repeat review transaction: `0x0ef382211f5e821486fcdcec6050e1fe1d5a663510594dbb7ef83925aa7cc070`.
-- Deployed source SHA-256: `d7b95848879652f94acfedf5e384504cb49dfea836f33c533999470dba7856b0`.
+- Contract: `0x8128cD94346c94fe1FF20204d54a4B980Ae00b61`.
+- Deployed source SHA-256: `a5bc7d153af669d5a03dc4e68e89ed88159ad0d265f17c2064a1f07733235391`.
+- Contract version: `tasktrace-1.1`.
+- Live matrix: 16/16 cases passed; 113/113 integration steps finalized successfully; schema and config checks passed.
+- React/provider E2E job: `work-69d379f8`; seven lifecycle transactions finalized successfully; result `RESOLVED`, A/B both `SATISFIED`.
 
-See [preserved receipts](reports/studionet/), [direct test report](reports/direct-tests.xml), and [resume notes](docs/RESUME.md). StudioNet cannot establish an EVM recipient payout; that requires separate testnet verification.
+See [v1.1 receipts](reports/studionet-sep07probe/), [React/provider E2E evidence](reports/frontend-live/), [historical failures](reports/archive/), [direct test report](reports/direct-tests.xml), and [resume notes](docs/RESUME.md). StudioNet cannot establish an EVM recipient payout; that requires separate Bradbury verification.
 
 ## Local setup
 
@@ -53,11 +54,12 @@ Requirements: a current Node.js compatible with Vite 7, npm, Python 3.12, and `u
 ```powershell
 npm ci
 npm test
+npm run test:types
 npm run build
 npm run dev
 ```
 
-`npm test` runs receipt-decoder and frontend unit/component tests. Browser-wallet E2E is not yet complete. The development server binds to `127.0.0.1`.
+`npm test` runs receipt-decoder and frontend unit/component tests. The development server binds to `127.0.0.1`.
 
 ```powershell
 uv venv --python 3.12 .venv
@@ -79,6 +81,15 @@ This command submits live StudioNet transactions, not local unit tests. It uses 
 
 The committed report is a historical run, not reusable signing material. Resuming it requires the original local StudioNet keys and unchanged source. On a fresh clone the runner will refuse mismatching wallets. Read the [resume instructions](docs/RESUME.md) before starting a new run; never delete failure evidence to make results look clean.
 
+The React/provider live test is also explicit opt-in. It consumes StudioNet test GEN only when its persisted happy-path job is absent:
+
+```powershell
+$env:TASKTRACE_LIVE_WALLET_TEST = 'studionet-only'
+npm run test:live-wallet
+```
+
+It signs with ignored, isolated StudioNet fixtures and exercises the real UI components and provider request path. It does not import the funded root `.env` and does not claim to automate or certify a user's MetaMask extension.
+
 ## Security and publication
 
 `.env`, `.secrets/`, caches, virtual environments, and build dependencies are ignored by Git. Only an empty `.env.example` is included. Before each commit, stage the intended files and run:
@@ -98,5 +109,6 @@ Bradbury deployment remains gated by `AGENTS.md`: lint, direct/adversarial tests
 - [Evidence schema](docs/EVIDENCE-SCHEMA.md)
 - [Full-artifact review](docs/FULL-ARTIFACT-REVIEW.md)
 - [Adversarial plan](docs/ADVERSARIAL-TEST-PLAN.md)
+- [Verification report](docs/VERIFICATION-REPORT.md)
 - [Implementation decisions](docs/IMPLEMENTATION-DECISIONS.md)
 - [Next-session handoff](docs/RESUME.md)

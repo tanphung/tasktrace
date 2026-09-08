@@ -1,5 +1,9 @@
 # TaskTrace — Threat model v0.2
 
+## Addendum v0.4 — explicit coverage, 06/09/2026
+
+Live history proves that reviewers disagree whether a timing statement also answers a permission prerequisite. Version 1.1 defines coverage as an explicit answer (semantic paraphrases allowed) or explicit unknown for each requested topic; a timing assertion alone does not answer authorization, eligibility, cost, or other independent prerequisites. This rule applies equally to leader and grounding verifier. B remains required to flag missing requested information, as in the approved plan; faithfully copying an incorrect but complete answer is distinct from silently copying an omission. No per-obligation comparison or citation gate is removed. Old deployments/terms are not mutated. Historical failures remain public.
+
 ## Addendum v0.3 — 06/09/2026, review resilience
 
 Receipt live đầu tiên báo thiếu citation nguồn/sản phẩm. Sửa prompt bằng output skeleton sinh từ obligation/chunk IDs đã xác minh; không sinh verdict hoặc quote mặc định. Mỗi node được thử tối đa hai lần tạo output trên cùng toàn bộ snapshot, chỉ khi parser báo lỗi `[LLM_ERROR]`. Không retry một output đã hợp lệ để chọn verdict thuận lợi. Lần hai vẫn lỗi thì fail closed/validator disagree, không phát hành credit hoặc biến lỗi thành UNASSESSABLE. Không đưa output lỗi trở lại prompt; chỉ dùng chẩn đoán từ parser để giảm đường prompt injection. Giới hạn này không giới hạn số giao dịch người dùng có thể gửi trong cửa sổ review; script giới hạn rotation và lưu mọi giao dịch. Chi phí và latency tăng tối đa một lần derive mỗi node, cần đo trên StudioNet.

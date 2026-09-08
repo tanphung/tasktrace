@@ -1,9 +1,11 @@
 import {describe,it,expect,vi} from 'vitest';
 import {render,screen,fireEvent} from '@testing-library/react';
-import {Actions,NewJob,amount,roleOf} from '../../frontend/src/Actions';
+import {Actions,NewJob,amount,roleOf,validatePublicText} from '../../frontend/src/Actions';
 import {Findings,Payments,money} from '../../frontend/src/Findings';
 import {jobFixture,reviewedFixture} from './fixtures';
 describe('honest contract rendering',()=>{
+  it('validates byte limits rather than character counts before signing',()=>{expect(()=>validatePublicText('😀'.repeat(31),120)).toThrow('120-byte');expect(validatePublicText('😀'.repeat(30),120)).toBe(120);});
+  it.each(['','\uFEFFtext','bad\u0000text','\uD800'])('rejects unsupported public text before signing',text=>expect(()=>validatePublicText(text,4096)).toThrow('UTF-8'));
   it('never fabricates an AI verdict for a review request',async()=>{const job=await jobFixture();job.status='REVIEW_REQUESTED';render(<Findings job={job}/>);expect(screen.getByText('No consensus review recorded')).toBeInTheDocument();expect(screen.queryByText('Responsibility, with receipts.')).not.toBeInTheDocument();});
   it('distinguishes client acceptance from AI review',async()=>{const job=await jobFixture();job.settlement_reason='CLIENT_ACCEPTED';render(<Findings job={job}/>);expect(screen.getByText(/not an AI-reviewed verdict/)).toBeInTheDocument();});
   it('renders findings with exact citation text',async()=>{render(<Findings job={await reviewedFixture()}/>);expect(screen.getByText('Responsibility, with receipts.')).toBeInTheDocument();expect(screen.getAllByText('A meaning')).toHaveLength(1);});
