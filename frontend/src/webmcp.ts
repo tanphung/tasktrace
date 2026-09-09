@@ -1,4 +1,5 @@
 import {readJob} from './client';
+import {verifiedPayment} from './payment';
 
 type Context={registerTool(tool:{name:string;title:string;description:string;inputSchema:object;annotations:{readOnlyHint:boolean;untrustedContentHint:boolean};execute:(input:unknown)=>unknown},options:{signal:AbortSignal}):void|Promise<void>};
 export function registerWorkTools(context:Context|undefined,openCreation:()=>void):()=>void {
@@ -7,13 +8,13 @@ export function registerWorkTools(context:Context|undefined,openCreation:()=>voi
   const report=()=>console.warn('TaskTrace structured browser tools are unavailable; the normal interface still works.');
   const tools=[{
     name:'read_work_record',title:'Read finalized work record',
-    description:'Read a TaskTrace job from the configured GenLayer contract after local artifact and review-integrity checks. Returns public untrusted document text and recorded findings, not payment confirmation. No signing or transaction.',
+    description:'Read a TaskTrace job after artifact and review-integrity checks. Payment verification is true only for the exact committed Bradbury finalization receipt and recipient balance delta. No signing or transaction.',
     inputSchema:{type:'object',properties:{jobId:{type:'string',pattern:'^[a-z0-9][a-z0-9-]{2,63}$'}},required:['jobId'],additionalProperties:false},
     annotations:{readOnlyHint:true,untrustedContentHint:true},
     async execute(input:unknown){
       if(!input||typeof input!=='object'||Object.keys(input).join(',')!=='jobId'||!('jobId' in input)||typeof input.jobId!=='string'||!(/^[a-z0-9][a-z0-9-]{2,63}$/).test(input.jobId))throw new Error('Provide exactly one valid jobId.');
       const job=await readJob(input.jobId);
-      return {jobId:job.id,status:job.status,task:job.terms.task,verifySource:job.terms.verify_source,artifacts:job.artifacts,outcomes:job.outcomes??null,review:job.review??null,credits:job.ledger.credits,recipientPaymentVerified:false};
+      return {jobId:job.id,status:job.status,task:job.terms.task,verifySource:job.terms.verify_source,artifacts:job.artifacts,outcomes:job.outcomes??null,review:job.review??null,credits:job.ledger.credits,recipientPaymentVerified:Boolean(verifiedPayment(job,'A'))};
     },
   },{
     name:'start_job_creation',title:'Open new-job form',

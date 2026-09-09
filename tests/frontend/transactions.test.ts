@@ -12,7 +12,7 @@ const record=():TxRecord=>({id:'test-tx',jobId:'test-job',method:'request_review
 const matchedReceipt=()=>({hash,from_address:account,to_address:contract,data:{calldata:{raw:Array.from(abi.calldata.encode(new Map([['method','request_review'],['args',['test-job']]] as [string,any][])))}}});
 beforeEach(()=>{
   vi.clearAllMocks();mocks.connect.mockResolvedValue(undefined);mocks.write.mockResolvedValue(hash);
-  mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?'0xf22f':method==='wallet_getSnaps'?{'npm:genlayer-wallet-plugin':{id:'npm:genlayer-wallet-plugin'}}:[account]);
+  mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?`0x${chain.id.toString(16)}`:method==='wallet_getSnaps'?{'npm:genlayer-wallet-plugin':{id:'npm:genlayer-wallet-plugin'}}:[account]);
   Object.defineProperty(window,'ethereum',{value:{request:mocks.request},configurable:true});
   Object.defineProperty(navigator,'locks',{value:{request:async(_name:unknown,_opts:unknown,callback:(lock:object)=>unknown)=>callback({name:'test-lock'})},configurable:true});
 });
@@ -25,7 +25,7 @@ describe('transaction safety',()=>{
     expect(invalidate).toHaveBeenCalledTimes(3);cleanup();expect(listeners.size).toBe(0);
   });
   it('rejects accounts changed during the connect flow',async()=>{
-    mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?'0xf22f':method==='eth_requestAccounts'?[account]:['0x3333333333333333333333333333333333333333']);
+    mocks.request.mockImplementation(async({method}:{method:string})=>method==='eth_chainId'?`0x${chain.id.toString(16)}`:method==='eth_requestAccounts'?[account]:['0x3333333333333333333333333333333333333333']);
     await expect(connect()).rejects.toThrow('during connection');
   });
   it('does not mark finalized execution successful until expected state is observable',async()=>{

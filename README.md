@@ -2,7 +2,7 @@
 
 Accountability for two-stage work handoffs, with evidence-based adjudication on GenLayer.
 
-**Verified StudioNet release candidate — not audited, not deployed to Bradbury, and not submitted.**
+**Verified Bradbury testnet release candidate — not audited, not submitted, and not guaranteed acceptance by GenLayer.**
 
 Intended Agent Tank hackathon track: **Future of Work**. The project is not an approved or submitted hackathon entry yet.
 
@@ -26,15 +26,28 @@ Credits and emitted payment messages are **not** proof of a completed recipient 
 
 - A pinned-runner Python Intelligent Contract with authorization, immutable handoffs, bounded full-text evidence, custom validator checks, deterministic credits, deadlines, and claims.
 - 92 passing direct/adversarial tests using controlled LLM mocks; these test contract logic but do not substitute for live consensus.
-- 64 passing frontend tests and two receipt-decoder tests (`npm test`), plus a separate full React-form/provider test against finalized StudioNet state.
+- 65 passing frontend tests and two receipt-decoder tests (`npm test`), plus a separate full React-form/provider test against finalized StudioNet state.
 - A real StudioNet v1.1 deployment with verified schema/config and **16/16 live adjudication cases passing**. The core A-fault, B-fault, and no-fault cases each passed three consecutive repetitions. Adversarial cases cover timing omission, both workers at fault, honest uncertainty, optional source-verification duty, tail-chunk prompt injection, and a conflicting reference source.
 - 113/113 tracked integration steps are `FINALIZED_SUCCESS`: one deployment plus seven lifecycle transactions for each of 16 cases. Raw receipts and resulting jobs are preserved.
+- The identical v1.1 source is deployed on Bradbury. A real three-wallet happy path reached `RESOLVED`; A and B were independently judged `SATISFIED`. Every successful lifecycle transaction reached finality. The first adjudication attempt ended `UNDETERMINED` and is preserved; one bounded retry finalized successfully.
+- Worker A's claim finalized with one `0.03 GEN` message to the expected EOA. The Bradbury finalization transaction succeeded and the recipient balance increased by exactly `0.03 GEN` in that block. This is recipient-payment evidence, not a production or security guarantee.
 - A React workspace with wallet actions, job creation, complete evidence/citations, role restrictions, deadlines, deterministic ledger checks, immutable-term verification, and persisted transaction tracking. The installed GenLayerJS version connects browser wallets through MetaMask's GenLayer Wallet Snap; the UI names this requirement.
 - A full happy-path test used the actual React forms and application provider requests to create, accept, submit, request review, and resolve a StudioNet job with three isolated test accounts. All seven transaction records are `FINALIZED_SUCCESS`; the resulting job is `RESOLVED` with both roles `SATISFIED`. This validates application wiring and real network writes, but it is not certification of a user's MetaMask/Snap installation.
 - TypeScript/Vite production build passes; bundle-size warning remains. The checkpoint dependency audit reports zero known npm vulnerabilities (not a security audit).
-- Design/security documents, nine prepared fixtures, a resumable no-auto-resend StudioNet runner, and preserved historical failures that motivated the v1.1 coverage policy.
+- Design/security documents, nine prepared fixtures, resumable no-auto-resend StudioNet and Bradbury runners, and preserved historical failures that motivated the v1.1 coverage policy.
 
-No Bradbury transaction or verified external-recipient payout has been performed. StudioNet has no EVM layer, so an emitted claim message is deliberately not displayed as recipient payment proof. No public website has been deployed. A static hosting project is reserved; it is not a live demo.
+The portal submission is intentionally left to the user, who will connect their own wallet and accept the hackathon terms. The project is a public-testnet demonstration, not an audit or a promise of team acceptance.
+
+## Bradbury evidence
+
+- RPC chain: `4221`; GenVM evidence-domain chain ID returned by the deployed contract: `1`.
+- Contract: `0x3FC5dce3abadf149111A45ae9936eBdD7A67AA88`.
+- Deployment transaction: `0xb98884870579ce28d933677f1fe1889f227c86c7b3c302c3c51aef9a1d7e44d2`.
+- Source SHA-256: `a5bc7d153af669d5a03dc4e68e89ed88159ad0d265f17c2064a1f07733235391`.
+- Smoke job: `bradbury-happy-a5bc7d15`; final state `RESOLVED`, A/B `SATISFIED`.
+- Claim: parent `0x5887f65277dc770bac30c60d3a319bba52a31e3239efe4674ba547caa8936218`; finalization transaction `0xa6770b72cd00d6fa1bd0393ecd0e50df39d513b1a7825e573070524112e5c9ff`; recipient delta `+0.03 GEN` at block `21205036`.
+
+See [Bradbury receipts and manifest](reports/bradbury-release/) and the [verification report](docs/VERIFICATION-REPORT.md).
 
 ## StudioNet evidence
 
@@ -90,6 +103,17 @@ npm run test:live-wallet
 
 It signs with ignored, isolated StudioNet fixtures and exercises the real UI components and provider request path. It does not import the funded root `.env` and does not claim to automate or certify a user's MetaMask extension.
 
+### Bradbury release evidence — explicit opt-in
+
+The committed Bradbury report is resumable and will not resend a step whose hash is already recorded. A fresh deployment intentionally requires the exact confirmation value and the reviewed source hash:
+
+```powershell
+$env:TASKTRACE_BRADBURY_CONFIRM = 'deploy-and-smoke-v1.1'
+npm run release:bradbury
+```
+
+This command reads the locally ignored `.env`, deploys/funds/submits public-testnet transactions, and can spend test GEN. Do not run it merely to inspect the committed report. It distinguishes provisional acceptance from finality and records terminal validator failures instead of hiding them.
+
 ## Security and publication
 
 `.env`, `.secrets/`, caches, virtual environments, and build dependencies are ignored by Git. Only an empty `.env.example` is included. Before each commit, stage the intended files and run:
@@ -100,7 +124,7 @@ npm run check:secrets
 
 The guard scans staged blobs for known local secrets, sensitive paths, and common credential patterns without printing secret values. It is a best-effort check, not an audit or a guarantee. After committing, `node scripts/check-secrets.mjs --head` checks the committed tree.
 
-Bradbury deployment remains gated by `AGENTS.md`: lint, direct/adversarial tests, complete live integration, and frontend tests/build must pass, then the user must review results and explicitly confirm deployment.
+The Bradbury deployment was performed only after the required gates and the user's explicit authorization. Future deployments remain subject to the same `AGENTS.md` gate.
 
 ## Design and next work
 

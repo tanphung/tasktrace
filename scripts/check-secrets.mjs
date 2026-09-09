@@ -22,8 +22,8 @@ const optionalRead = async path => {
 };
 const envText = await optionalRead(resolve(root,'.env'));
 for (const line of envText.split(/\r?\n/)) {
-  const match = line.match(/^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=\s*(.*?)\s*$/);
-  if (match) remember(match[1].replace(/^(['"])(.*)\1$/,'$2'));
+  const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+  if (match && /(?:PRIVATE|SECRET|TOKEN|PASSWORD|API_KEY|MNEMONIC)/i.test(match[1])) remember(match[2].replace(/^(['"])(.*)\1$/,'$2'));
 }
 const rememberJson = value => {
   if (typeof value === 'string') remember(value);

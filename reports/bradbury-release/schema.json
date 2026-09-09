@@ -1,0 +1,235 @@
+{
+  "ctor": {
+    "kwparams": {},
+    "params": []
+  },
+  "methods": {
+    "accept_job": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ],
+        [
+          "terms_hash",
+          "string"
+        ]
+      ],
+      "payable": true,
+      "readonly": false,
+      "ret": "null"
+    },
+    "advance_timeout": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    },
+    "approve_work": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    },
+    "cancel_job": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    },
+    "claim": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    },
+    "create_job": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ],
+        [
+          "title",
+          "string"
+        ],
+        [
+          "task",
+          "string"
+        ],
+        [
+          "source",
+          "string"
+        ],
+        [
+          "worker_a",
+          "address"
+        ],
+        [
+          "worker_b",
+          "address"
+        ],
+        [
+          "fee_a",
+          "int"
+        ],
+        [
+          "fee_b",
+          "int"
+        ],
+        [
+          "bond_a",
+          "int"
+        ],
+        [
+          "bond_b",
+          "int"
+        ],
+        [
+          "penalty_a",
+          "int"
+        ],
+        [
+          "penalty_b",
+          "int"
+        ],
+        [
+          "accept_seconds",
+          "int"
+        ],
+        [
+          "step_seconds",
+          "int"
+        ],
+        [
+          "review_seconds",
+          "int"
+        ],
+        [
+          "adjudication_seconds",
+          "int"
+        ],
+        [
+          "verify_source",
+          "bool"
+        ]
+      ],
+      "payable": true,
+      "readonly": false,
+      "ret": "null"
+    },
+    "get_config": {
+      "kwparams": {},
+      "params": [],
+      "readonly": true,
+      "ret": "string"
+    },
+    "get_job": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "readonly": true,
+      "ret": "string"
+    },
+    "get_review_input": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "readonly": true,
+      "ret": "string"
+    },
+    "list_jobs": {
+      "kwparams": {},
+      "params": [
+        [
+          "offset",
+          "int"
+        ],
+        [
+          "limit",
+          "int"
+        ]
+      ],
+      "readonly": true,
+      "ret": "string"
+    },
+    "request_review": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    },
+    "resolve_review": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    },
+    "submit_work": {
+      "kwparams": {},
+      "params": [
+        [
+          "job_id",
+          "string"
+        ],
+        [
+          "content",
+          "string"
+        ],
+        [
+          "upstream_submission_id",
+          "string"
+        ]
+      ],
+      "payable": false,
+      "readonly": false,
+      "ret": "null"
+    }
+  }
+}

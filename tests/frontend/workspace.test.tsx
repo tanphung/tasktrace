@@ -3,6 +3,7 @@ import {render,screen,fireEvent} from '@testing-library/react';
 import {Actions,NewJob,amount,roleOf,validatePublicText} from '../../frontend/src/Actions';
 import {Findings,Payments,money} from '../../frontend/src/Findings';
 import {jobFixture,reviewedFixture} from './fixtures';
+import {verifiedPayment} from '../../frontend/src/payment';
 describe('honest contract rendering',()=>{
   it('validates byte limits rather than character counts before signing',()=>{expect(()=>validatePublicText('😀'.repeat(31),120)).toThrow('120-byte');expect(validatePublicText('😀'.repeat(30),120)).toBe(120);});
   it.each(['','\uFEFFtext','bad\u0000text','\uD800'])('rejects unsupported public text before signing',text=>expect(()=>validatePublicText(text,4096)).toThrow('UTF-8'));
@@ -10,7 +11,8 @@ describe('honest contract rendering',()=>{
   it('distinguishes client acceptance from AI review',async()=>{const job=await jobFixture();job.settlement_reason='CLIENT_ACCEPTED';render(<Findings job={job}/>);expect(screen.getByText(/not an AI-reviewed verdict/)).toBeInTheDocument();});
   it('renders findings with exact citation text',async()=>{render(<Findings job={await reviewedFixture()}/>);expect(screen.getByText('Responsibility, with receipts.')).toBeInTheDocument();expect(screen.getAllByText('A meaning')).toHaveLength(1);});
   it('never treats an emitted message as paid',async()=>{const job=await reviewedFixture();job.claims.A={state:'MESSAGE_EMITTED',amount:'15',recipient:job.workers.A,kind:'GENLAYER_REVIEW',requested_at:150,settlement_id:'test-job:A:1'};render(<Payments job={job}/>);expect(screen.getByText('Recipient payment not verified')).toBeInTheDocument();expect(screen.queryByText('Payment completed')).not.toBeInTheDocument();});
-  it('keeps the new-job submit disabled without wallet even after consent',()=>{render(<NewJob onClose={()=>{}} onSubmitted={()=>{}}/>);fireEvent.click(screen.getByRole('checkbox',{name:/all evidence is public/}));expect(screen.getByRole('button',{name:/Create job/})).toBeDisabled();});
+  it('verifies only the exact committed Bradbury payout record',async()=>{const job=await reviewedFixture();job.id='bradbury-happy-a5bc7d15';job.workers.A='0x592a3c357bA60f555C2d51044D7A9324870d6074';job.claims.A={state:'MESSAGE_EMITTED',amount:'30000000000000000',recipient:job.workers.A,kind:'GENLAYER_REVIEW',requested_at:150,settlement_id:'bradbury-happy-a5bc7d15:A:1'};expect(verifiedPayment(job,'A')).toBeDefined();job.claims.A.amount='30000000000000001';expect(verifiedPayment(job,'A')).toBeUndefined();});
+  it('keeps the new-job submit disabled without wallet even after consent',()=>{render(<NewJob onClose={()=>{}} onSubmitted={()=>{}}/>);fireEvent.click(screen.getByRole('checkbox',{name:/all evidence and test amounts are public/}));expect(screen.getByRole('button',{name:/Create job/})).toBeDisabled();});
   it('unrelated wallet cannot review the job',async()=>{const job=await jobFixture();render(<Actions job={job} account="0x5555555555555555555555555555555555555555" busy={false} onSubmitted={vi.fn()}/>);expect(screen.queryByRole('button',{name:/Request GenLayer review/})).not.toBeInTheDocument();});
   it('matches participant addresses case-insensitively',async()=>{const job=await jobFixture();expect(roleOf(job,job.workers.A.toUpperCase())).toBe('A');});
   it.each(['-1','1e3','1.0000000000000000001','101','NaN'])('rejects unsafe GEN input %s',input=>expect(()=>amount(input)).toThrow());

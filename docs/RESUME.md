@@ -1,5 +1,13 @@
 # Mốc tiếp tục TaskTrace — cập nhật 06/09/2026
 
+## Mốc Bradbury đã xác minh — 09/09/2026
+
+- Contract v1.1 đã deploy/finalized trên Bradbury tại `0x3FC5dce3abadf149111A45ae9936eBdD7A67AA88`; deploy tx `0xb98884870579ce28d933677f1fe1889f227c86c7b3c302c3c51aef9a1d7e44d2`. Source hash vẫn là `a5bc7d153af669d5a03dc4e68e89ed88159ad0d265f17c2064a1f07733235391`.
+- Bradbury RPC chain ID là `4221`; `gl.message.chain_id`/evidence-domain do contract trả về là `1`. Frontend kiểm tra riêng hai miền này.
+- Smoke job `bradbury-happy-a5bc7d15` đã `RESOLVED`, A/B đều `SATISFIED`; tất cả giao dịch thành công đã final. Resolve lần đầu `UNDETERMINED` được giữ nguyên; bounded retry lần một final thành công.
+- Claim A `0x5887...6218` final thành công. Finalize EVM tx `0xa677...c9ff`, block `21205036`; balance ví A tăng chính xác `0.03 GEN`. Xem `reports/bradbury-release/`.
+- Frontend đã trỏ Bradbury và chỉ mở write sau `submissionReady` gate. Việc còn lại: chạy lại toàn bộ gate, browser QA, commit/push, publish Sites và cập nhật submission draft. Người dùng tự kết nối portal wallet và tự nộp.
+
 ## Mốc release candidate v1.1 — 08/09/2026
 
 Đây là mốc mới nhất và thay thế các số liệu cũ bên dưới khi có khác biệt.

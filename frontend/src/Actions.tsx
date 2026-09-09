@@ -45,7 +45,7 @@ export function Actions({job,account,busy,onSubmitted}:{job:Job;account?:Address
     {job.status==='REVIEWABLE'&&role&&<div className="button-row">{!expired&&<button className="primary" onClick={()=>void send('request_review')}>Request GenLayer review</button>}{role==='CLIENT'&&<button onClick={()=>void send('approve_work')}>Accept work without AI review</button>}</div>}
     {job.status==='REVIEW_REQUESTED'&&!expired&&role&&<button className="primary" onClick={()=>void send('resolve_review')}>Run independent consensus review</button>}
     {expired&&due&&<button onClick={()=>void send('advance_timeout')}>Apply agreed deadline rule</button>}
-    {['RESOLVED','CANCELLED'].includes(job.status)&&role&&BigInt(job.ledger.credits[role])>0n&&<><button onClick={()=>void send('claim')}>Request transfer of {money(job.ledger.credits[role])}</button><p className="meta">StudioNet cannot verify payment to an external wallet. An emitted message is not payment confirmation.</p></>}
+    {['RESOLVED','CANCELLED'].includes(job.status)&&role&&BigInt(job.ledger.credits[role])>0n&&<><button onClick={()=>void send('claim')}>Request transfer of {money(job.ledger.credits[role])}</button><p className="meta">An emitted message is only a transfer request. Confirm the triggered child transaction reaches finality before treating it as payment.</p></>}
     {job.status==='INCONCLUSIVE'&&!expired&&<p className="meta">The review is inconclusive. Its verdict cannot be rerolled; neutral settlement becomes available at the deadline.</p>}
   </fieldset></section>;
 }
@@ -77,7 +77,7 @@ export function NewJob({account,onClose,onSubmitted}:{account?:Address;onClose:(
     <div className="form-grid"><label>Worker A wallet<input name="workerA" required placeholder="0x…"/></label><label>Worker B wallet<input name="workerB" required placeholder="0x…"/></label></div>
     <div className="form-grid">{(['A','B'] as const).map(role=><div className="money-fields" key={role}><h3>Worker {role}</h3>{['fee','bond','penalty'].map(key=><label key={key}>{label(key)} (GEN)<input name={key+role} inputMode="decimal" required defaultValue={key==='bond'?'0.002':'0.001'}/></label>)}</div>)}</div>
     <label className="check"><input type="checkbox" name="verifySource"/>Worker B must also verify the original source.</label><p>Each acceptance, work, review-request and adjudication window is one day. Both workers accept the exact terms before activation. If the client does not dispute submitted work in time, it is accepted. Unassessable work unwinds neutrally and may remain unpaid.</p>
-    <label className="check"><input type="checkbox" required checked={agree} onChange={e=>setAgree(e.target.checked)}/>I understand that all evidence is public, the reference is not independently verified truth, and this is a StudioNet development build.</label>
+    <label className="check"><input type="checkbox" required checked={agree} onChange={e=>setAgree(e.target.checked)}/>I understand that all evidence and test amounts are public, the reference is not independently verified truth, and this runs on Bradbury testnet.</label>
     {error&&<p role="alert" className="error">{error}</p>}<button className="primary" disabled={!account||!agree||busy}>{busy?'Check your wallet…':'Create job & deposit both fees'}</button>{!account&&<p className="meta">Connect your wallet first. No private key is requested by this website.</p>}
   </fieldset></form></section>;
 }

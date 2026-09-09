@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check:secrets": "node scripts/check-secrets.mjs",
+    "release:bradbury": "node scripts/bradbury-release.mjs",
     "test:integration": "node scripts/integration.mjs",
     "test:live-wallet": "vitest run --config vitest.live.config.ts --reporter=verbose",
     "test:types": "tsc -p tsconfig.tests.json",

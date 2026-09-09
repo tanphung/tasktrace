@@ -1,6 +1,6 @@
 import {abi,createClient} from 'genlayer-js';
 import type {Address,CalldataEncodable,Hash} from 'genlayer-js/types';
-import {chain,contract,readClient,readJob} from './client';
+import {chain,contract,readClient,readJob,writesEnabled} from './client';
 import {executionName,statusName} from '../../scripts/receipts.mjs';
 
 export type Provider=NonNullable<NonNullable<Parameters<typeof createClient>[0]>['provider']>;
@@ -52,7 +52,7 @@ export function watchWallet(invalidate:()=>void):()=>void {
 }
 const methods=new Set(['create_job','accept_job','cancel_job','submit_work','approve_work','request_review','resolve_review','advance_timeout','claim']);
 export async function submit(account:Address,jobId:string,method:string,args:CalldataEncodable[],value=0n):Promise<TxRecord>{
-  if(chain.id!==61999)throw new Error('This development build only enables StudioNet writes. Bradbury requires the deployment verification gate.');
+  if(!writesEnabled)throw new Error('Bradbury writes remain locked until the committed deployment verification gate passes.');
   if(!methods.has(method))throw new Error('Unsupported contract action');
   if(!navigator.locks)throw new Error('A browser with Web Locks is required to prevent duplicate wallet submissions.');
   return navigator.locks.request(historyKey,{ifAvailable:true},async lock=>{
