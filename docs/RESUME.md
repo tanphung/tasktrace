@@ -1,4 +1,12 @@
-# Mốc tiếp tục TaskTrace — cập nhật 06/09/2026
+# Mốc tiếp tục TaskTrace — cập nhật 09/09/2026
+
+## Mốc public cuối cùng — 09/09/2026
+
+- Demo public đã xuất bản từ Sites version 1, gắn với commit đã test `7d8e5ab8ac799826d49d830846b580408e74fae5`: `https://tasktrace-work.tanphung6666.chatgpt.site/#job=bradbury-happy-a5bc7d15`.
+- Đã kiểm tra lại trên production sau khi chuyển access sang `public`: không còn yêu cầu đăng nhập; job Bradbury tải ở trạng thái `RESOLVED`, bốn finding đều `SATISFIED`, và payout A hiển thị `Recipient transfer verified` với chênh lệch chính xác `+0.03 GEN`.
+- GitHub `main` chứa toàn bộ source, test, raw evidence Bradbury và tài liệu bàn giao public; commit cuối phải qua secret guard trước khi push.
+- Việc còn lại duy nhất không tự động hóa: người dùng kiểm tra hồ sơ, xác nhận GitHub liên kết portal, kết nối ví của mình, chấp nhận điều khoản và tự nộp bài.
+- Các phần bên dưới được giữ làm lịch sử kỹ thuật. Khi thông tin mâu thuẫn, mốc public cuối cùng và báo cáo `docs/VERIFICATION-REPORT.md` là nguồn hiện hành.
 
 ## Mốc Bradbury đã xác minh — 09/09/2026
 
@@ -6,7 +14,7 @@
 - Bradbury RPC chain ID là `4221`; `gl.message.chain_id`/evidence-domain do contract trả về là `1`. Frontend kiểm tra riêng hai miền này.
 - Smoke job `bradbury-happy-a5bc7d15` đã `RESOLVED`, A/B đều `SATISFIED`; tất cả giao dịch thành công đã final. Resolve lần đầu `UNDETERMINED` được giữ nguyên; bounded retry lần một final thành công.
 - Claim A `0x5887...6218` final thành công. Finalize EVM tx `0xa677...c9ff`, block `21205036`; balance ví A tăng chính xác `0.03 GEN`. Xem `reports/bradbury-release/`.
-- Frontend đã trỏ Bradbury và chỉ mở write sau `submissionReady` gate. Việc còn lại: chạy lại toàn bộ gate, browser QA, commit/push, publish Sites và cập nhật submission draft. Người dùng tự kết nối portal wallet và tự nộp.
+- Frontend đã trỏ Bradbury và chỉ mở write sau `submissionReady` gate. Toàn bộ gate, browser QA và Sites publication đã hoàn thành; người dùng tự kết nối portal wallet và tự nộp.
 
 ## Mốc release candidate v1.1 — 08/09/2026
 
@@ -84,7 +92,7 @@ Source SHA-256: `4606d0387360f0b4c0613a8188221def59225cdc0155e2b502af1b0dc2633f5
 - `.env` chứa ví đã được người dùng cấp; chỉ giữ tại máy. Không đọc ra log, chat, source, báo cáo, bundle hoặc GitHub.
 - `.secrets/studionet.json` là các ví riêng cho StudioNet. File không được push; giữ thư mục gốc để tiếp tục run cũ. Clone repo không khôi phục được các khóa này.
 - GitHub CLI đang đăng nhập `tanphung`; dùng keyring, không viết token vào remote URL.
-- Sites project ID đã đăng ký: `appgprj_6a9c433f48d08191995a16cf0d13d0f4`, slug `tasktrace-work`. Cấu hình ở `.openai/hosting.json`; dùng lại project này, không tạo trùng. Chưa có live website. Token source-repository ngắn hạn không được lưu hoặc commit; lấy mới qua tool khi cần.
+- Sites project ID: `appgprj_6a9c433f48d08191995a16cf0d13d0f4`, slug `tasktrace-work`. Cấu hình ở `.openai/hosting.json`; dùng lại project này, không tạo trùng. Website hiện đã public tại URL ghi ở mốc đầu tài liệu. Token source-repository ngắn hạn không được lưu hoặc commit; lấy mới qua tool khi cần.
 - Mỗi lần commit: kiểm tra staged files, chạy `npm run check:secrets`, rồi kiểm tra lại committed tree. Đây là guard hỗ trợ, vẫn phải review nội dung trước public push.
 
 ## Lệnh kiểm tra nhanh trên máy hiện tại

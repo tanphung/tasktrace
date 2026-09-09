@@ -13,6 +13,8 @@ Verified through 9 September 2026. This report describes a StudioNet test matrix
 - Raw integration evidence: `reports/studionet-sep07probe/`
 - Bradbury release evidence: `reports/bradbury-release/`
 - React/provider evidence: `reports/frontend-live/`
+- Public demo: `https://tasktrace-work.tanphung6666.chatgpt.site/#job=bradbury-happy-a5bc7d15`
+- Hosted source version: commit `7d8e5ab8ac799826d49d830846b580408e74fae5` (Sites version 1)
 
 ## Offline and build gates
 
@@ -70,10 +72,10 @@ Worker A then claimed `0.03 GEN`. Parent claim `0x5887f65277dc770bac30c60d3a319b
 - Immutable terms, accepted obligations, settlement arithmetic, claim recipient, and emitted-message accounting are revalidated by the frontend.
 - AI output cannot choose fees, bonds, penalties, recipients, deadlines, or transfer amounts.
 
-## Remaining release gates
+## Public-demo verification and remaining gate
 
-1. Publish and verify the reserved Sites project from the exact tested commit.
-2. Record the public demo URL in the submission draft.
-3. The user reviews the final evidence, connects their own portal wallet, accepts the terms, and submits.
+Sites publication succeeded on 9 September 2026 with public access. A browser reload opened the production URL without authentication and loaded job `bradbury-happy-a5bc7d15` as `RESOLVED`, all four findings as `SATISFIED`, the committed evidence hashes, and the exact `+0.03 GEN` recipient balance delta with its Bradbury finalization link.
+
+The only remaining release action is user-controlled: review the final evidence, connect the user's own portal wallet, confirm the linked GitHub account, accept the terms, and submit. No portal entry has been submitted by this build process.
 
 The frontend still treats `MESSAGE_EMITTED` as a request rather than generic payment proof. The Bradbury claim above is called verified only because its finalized parent message, EVM finalization receipt, recipient, amount, and exact block balance delta all agree.
