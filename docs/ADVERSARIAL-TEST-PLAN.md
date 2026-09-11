@@ -1,5 +1,20 @@
 # TaskTrace — Kế hoạch kiểm thử đối kháng v0.2
 
+## v2 mandatory matrix — updated 11/09/2026
+
+[IC-V2-ARCHITECTURE.md](IC-V2-ARCHITECTURE.md), section 9 governs the new release. Add direct + explicit validator-helper + full integration coverage for: valid prefix/contradictory tail; canonical-host/redirect/owner/repository/commit/blob/hash mismatch; symlink/submodule/truncated provider response; missing artifact/chunk; missing/duplicate/extra funded obligation; valid-schema wrong decision and unsupported reasoning; exact deal/source/recipient/amount/kind/RELEASED mismatch; reentrancy, failed recipient and duplicate release; no state mutations after rejected consensus; deadlines/revisions and refund eligibility.
+
+Tests must demonstrate independent leader/validator acquisition and substantive rejection. Ordinary direct tests with a mocked LLM cannot establish real committee behavior. Studio does not fully implement EVM contract interaction; local router tests and mocked IC reads must not be represented as a passed native end-to-end integration. Missing full-path environment is an explicit open gate. No deployment until required contract tests pass and the user confirms.
+
+Current component evidence: 144 v2 direct tests pass, including whole-tail,
+identity, report completeness, provenance-report binding, stage-specific
+deterministic duties and exact receipt negatives. A real pinned GenVM controlled
+host probe passes exact EVM target/value encoding. A second real GenVM probe with
+the unmodified official local web module confirms cross-host redirects are
+followed and hidden from the contract response; this is a passed diagnostic but
+a **failed production capability gate**. Real committee/LLM, router execution,
+finality and funded lifecycle cases below remain open.
+
 ## Addendum v0.4 — preserve ambiguous historical case
 
 The original A-fault fixture (`immediately`, with no explicit approval answer) conflated inherited incorrect information with an inherited omission that B was required to flag. Preserve its exact source/task/A/B bytes as `timing-omission`; under the clarified v1.1 rubric both stages violate coverage. Keep historical v1.0 receipts unchanged and report both versions, never combine them into a cleaned success rate.

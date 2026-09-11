@@ -1,5 +1,7 @@
 # TaskTrace v1.1 verification report
 
+Product-readiness update, 9 September: the historical technical results below remain valid for their recorded runs. The user requested a higher product-quality release; agent execution, general payment verification, comparative UX and visual redesign remain open under [the current release plan](COMPETITIVE-RELEASE-PLAN.md). Earlier statements that only portal submission remained are superseded.
+
 Verified through 9 September 2026. This report describes a StudioNet test matrix and a Bradbury release candidate. It is not a security audit, hackathon submission, or acceptance by GenLayer.
 
 ## Build identity
@@ -13,8 +15,8 @@ Verified through 9 September 2026. This report describes a StudioNet test matrix
 - Raw integration evidence: `reports/studionet-sep07probe/`
 - Bradbury release evidence: `reports/bradbury-release/`
 - React/provider evidence: `reports/frontend-live/`
-- Public demo: `https://tasktrace-work.tanphung6666.chatgpt.site/#job=bradbury-happy-a5bc7d15`
-- Hosted source version: commit `7d8e5ab8ac799826d49d830846b580408e74fae5` (Sites version 1)
+- Public demo: `https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15`
+- Hosted source version: commit `d34f6cdf20dd53934871cc5912da7d653e6e9a7e` (Vercel project `vandas/tasktrace-genlayer`)
 
 ## Offline and build gates
 
@@ -74,8 +76,8 @@ Worker A then claimed `0.03 GEN`. Parent claim `0x5887f65277dc770bac30c60d3a319b
 
 ## Public-demo verification and remaining gate
 
-Sites publication succeeded on 9 September 2026 with public access. A browser reload opened the production URL without authentication and loaded job `bradbury-happy-a5bc7d15` as `RESOLVED`, all four findings as `SATISFIED`, the committed evidence hashes, and the exact `+0.03 GEN` recipient balance delta with its Bradbury finalization link.
+Vercel production deployment `dpl_GYZ8N8HdjTYHPcjuH8USjq6wzFa6` reached `READY` on 9 September 2026. A browser opened the neutral production alias without authentication and loaded job `bradbury-happy-a5bc7d15` as `RESOLVED`, all four findings as `SATISFIED`, the committed evidence hashes, and the exact `+0.03 GEN` recipient balance delta with its Bradbury finalization link.
 
-The only remaining release action is user-controlled: review the final evidence, connect the user's own portal wallet, confirm the linked GitHub account, accept the terms, and submit. No portal entry has been submitted by this build process.
+Public deployment is complete for the earlier technical release. Product work now continues under the current release plan; portal review and submission remain user-controlled. No portal entry has been submitted by this build process.
 
 The frontend still treats `MESSAGE_EMITTED` as a request rather than generic payment proof. The Bradbury claim above is called verified only because its finalized parent message, EVM finalization receipt, recipient, amount, and exact block balance delta all agree.

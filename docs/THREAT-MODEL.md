@@ -1,5 +1,13 @@
 # TaskTrace — Threat model v0.2
 
+## v2 design supersession — 09/09/2026
+
+The proposed authority boundary and failure policy in [IC-V2-ARCHITECTURE.md](IC-V2-ARCHITECTURE.md) supersede the historical v1.1-only assumptions below. All provenance, independent assessment, eligibility and receipt confirmation belong to IC execution. UI/backend/worker output is untrusted.
+
+New attack surfaces: canonical-host confusion and redirects; provider owner/repository transfer; mutable refs and symlink/submodule targets; API truncation/content-type confusion; valid prefix hiding contradictory tail; incomplete obligation lists; receipt replay across deals/contracts/chains/roles; reentrancy and release failure; forged or non-final receipt state. Require authoritative provider identity, complete immutable bytes and strict schema, independent validator fetch/derivation, pinned router/source identity and exact IC receipt confirmation. Unsupported providers fail closed. Provider availability/rate limits and SDK finality/redirect behavior are explicit feasibility gates. A wallet submission does not prove ownership of a GitHub account; a provider-bound document does not prove real-world truth.
+
+Failed/unknown transfer state cannot recreate spendable credits or trigger automatic resend. No automatic migration of v1.1 balances/claims and no v2 deployment from earlier permission.
+
 ## Addendum v0.4 — explicit coverage, 06/09/2026
 
 Live history proves that reviewers disagree whether a timing statement also answers a permission prerequisite. Version 1.1 defines coverage as an explicit answer (semantic paraphrases allowed) or explicit unknown for each requested topic; a timing assertion alone does not answer authorization, eligibility, cost, or other independent prerequisites. This rule applies equally to leader and grounding verifier. B remains required to flag missing requested information, as in the approved plan; faithfully copying an incorrect but complete answer is distinct from silently copying an omission. No per-obligation comparison or citation gate is removed. Old deployments/terms are not mutated. Historical failures remain public.

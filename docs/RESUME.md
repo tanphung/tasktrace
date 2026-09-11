@@ -1,9 +1,25 @@
-# Mốc tiếp tục TaskTrace — cập nhật 09/09/2026
+# Mốc tiếp tục TaskTrace — cập nhật 11/09/2026
+
+## Tiến độ mới nhất — đã code lõi v2, chưa phải dApp v2 hoàn chỉnh
+
+Đọc [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). Đã có `contracts/tasktrace_v2_core.py`, 144 direct tests và toàn bộ 239 Python regression đạt; lint không warning. Adapter EVM WASI đã chạy trong binary GenVM v0.2.12 thực với controlled host, giữ đúng target/value; chưa phải router/finality/chain E2E. Probe web module chính thức đã chứng minh redirect cross-host bị tự follow và IC chỉ thấy final 200/body, không URL/history; vì vậy external acquisition vẫn đóng. Report assembler IC đã bind provenance đầy đủ và tách deterministic obligation A/B. Frontend đạt 2 receipt + 65 UI tests, build/typecheck sạch và bundle lớn nhất còn 285.22 kB; desktop/mobile đã kiểm tra trực quan. Chưa bật funding hoặc settlement, không dùng ví/deploy trong bước này.
+
+## Mốc mới nhất — v2 preflight bị chặn, chưa deploy
+
+Đã thực hiện kiểm tra SDK theo kế hoạch: 92 regression tests v1 đạt, 3 gate v2 thất bại (typed EVM view lỗi thuộc tính; typed emit làm value thành 0; web SDK không có redirect control/history). Đọc [V2-FEASIBILITY.md](V2-FEASIBILITY.md) và raw `reports/v2-preflight.xml` trước khi tiếp tục. Default pytest đã bao gồm feasibility để không che gate đỏ. Chưa sửa SDK, chưa code adapter/settlement v2, chưa gửi giao dịch/deploy/push production. Cần official supported API/runner và kiểm chứng finality/full integration; không bỏ yêu cầu của người dùng hoặc chuyển authority ra backend. Các mốc dưới là lịch sử, không phải tuyên bố sẵn sàng nộp.
+
+## Trạng thái hiện hành — mở lại giai đoạn hoàn thiện sản phẩm
+
+Yêu cầu mới nhất: triển khai kiến trúc [IC v2](IC-V2-ARCHITECTURE.md) trước các hạng mục UI. Mọi provenance, semantic validation và settlement/receipt decision thuộc IC. Đã trình kiến trúc, chưa viết/deploy v2. Skill write-contract và genvm-lint đã dùng; lint v1.1 hiện tại đạt nhưng không chứng minh v2 đạt. Điểm tiếp tục: kiểm chứng SDK redirect handling, provider provenance, EVM receipt/finality và môi trường integration trước deploy; sau đó code/tests. Quyền deploy cũ không áp dụng v2.
+
+Người dùng đánh giá giao diện và mức hoàn thiện chưa đủ cạnh tranh, yêu cầu chuẩn chất lượng rất cao. Đọc [COMPETITIVE-RELEASE-PLAN.md](COMPETITIVE-RELEASE-PLAN.md) trước mọi kế hoạch/checkpoint bên dưới. Kế hoạch này thay thế tuyên bố “chỉ còn nộp”. Contract/receipts cũ vẫn là bằng chứng đã đạt; agent thực thi, generic payout verification, comparative workspace và UX release mới còn phải hoàn thiện.
+
+Preview local đang ở cổng 5174; production Vercel vẫn là bản trước redesign. Local edits chưa commit gồm cập nhật hosting/docs, prototype UI/ảnh/CSS và kế hoạch mới. Bắt đầu từ R0 của kế hoạch; không push main bất chợt vì Vercel đã liên kết GitHub.
 
 ## Mốc public cuối cùng — 09/09/2026
 
-- Demo public đã xuất bản từ Sites version 1, gắn với commit đã test `7d8e5ab8ac799826d49d830846b580408e74fae5`: `https://tasktrace-work.tanphung6666.chatgpt.site/#job=bradbury-happy-a5bc7d15`.
-- Đã kiểm tra lại trên production sau khi chuyển access sang `public`: không còn yêu cầu đăng nhập; job Bradbury tải ở trạng thái `RESOLVED`, bốn finding đều `SATISFIED`, và payout A hiển thị `Recipient transfer verified` với chênh lệch chính xác `+0.03 GEN`.
+- Demo chính đã deploy production trên Vercel từ commit `d34f6cdf20dd53934871cc5912da7d653e6e9a7e`: `https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15`.
+- Đã kiểm tra lại alias Vercel trong trình duyệt: không cần đăng nhập; job Bradbury tải ở trạng thái `RESOLVED`, bốn finding đều `SATISFIED`, và payout A hiển thị `Recipient transfer verified` với chênh lệch chính xác `+0.03 GEN`.
 - GitHub `main` chứa toàn bộ source, test, raw evidence Bradbury và tài liệu bàn giao public; commit cuối phải qua secret guard trước khi push.
 - Việc còn lại duy nhất không tự động hóa: người dùng kiểm tra hồ sơ, xác nhận GitHub liên kết portal, kết nối ví của mình, chấp nhận điều khoản và tự nộp bài.
 - Các phần bên dưới được giữ làm lịch sử kỹ thuật. Khi thông tin mâu thuẫn, mốc public cuối cùng và báo cáo `docs/VERIFICATION-REPORT.md` là nguồn hiện hành.
@@ -14,7 +30,7 @@
 - Bradbury RPC chain ID là `4221`; `gl.message.chain_id`/evidence-domain do contract trả về là `1`. Frontend kiểm tra riêng hai miền này.
 - Smoke job `bradbury-happy-a5bc7d15` đã `RESOLVED`, A/B đều `SATISFIED`; tất cả giao dịch thành công đã final. Resolve lần đầu `UNDETERMINED` được giữ nguyên; bounded retry lần một final thành công.
 - Claim A `0x5887...6218` final thành công. Finalize EVM tx `0xa677...c9ff`, block `21205036`; balance ví A tăng chính xác `0.03 GEN`. Xem `reports/bradbury-release/`.
-- Frontend đã trỏ Bradbury và chỉ mở write sau `submissionReady` gate. Toàn bộ gate, browser QA và Sites publication đã hoàn thành; người dùng tự kết nối portal wallet và tự nộp.
+- Frontend đã trỏ Bradbury và chỉ mở write sau `submissionReady` gate. Toàn bộ gate, browser QA và Vercel production deployment đã hoàn thành; người dùng tự kết nối portal wallet và tự nộp.
 
 ## Mốc release candidate v1.1 — 08/09/2026
 
@@ -92,7 +108,7 @@ Source SHA-256: `4606d0387360f0b4c0613a8188221def59225cdc0155e2b502af1b0dc2633f5
 - `.env` chứa ví đã được người dùng cấp; chỉ giữ tại máy. Không đọc ra log, chat, source, báo cáo, bundle hoặc GitHub.
 - `.secrets/studionet.json` là các ví riêng cho StudioNet. File không được push; giữ thư mục gốc để tiếp tục run cũ. Clone repo không khôi phục được các khóa này.
 - GitHub CLI đang đăng nhập `tanphung`; dùng keyring, không viết token vào remote URL.
-- Sites project ID: `appgprj_6a9c433f48d08191995a16cf0d13d0f4`, slug `tasktrace-work`. Cấu hình ở `.openai/hosting.json`; dùng lại project này, không tạo trùng. Website hiện đã public tại URL ghi ở mốc đầu tài liệu. Token source-repository ngắn hạn không được lưu hoặc commit; lấy mới qua tool khi cần.
+- Vercel project chính: `vandas/tasktrace-genlayer`; alias production ghi ở mốc đầu tài liệu. `.vercel/` chỉ chứa liên kết local và bị ignore. Sites project cũ vẫn được ghi trong `.openai/hosting.json` để bảo toàn lịch sử triển khai; không dùng URL đó trong hồ sơ nộp.
 - Mỗi lần commit: kiểm tra staged files, chạy `npm run check:secrets`, rồi kiểm tra lại committed tree. Đây là guard hỗ trợ, vẫn phải review nội dung trước public push.
 
 ## Lệnh kiểm tra nhanh trên máy hiện tại

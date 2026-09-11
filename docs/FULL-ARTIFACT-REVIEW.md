@@ -1,5 +1,11 @@
 # TaskTrace — Chiến lược đọc đủ artifact v0.2
 
+## v2 design supersession — 09/09/2026
+
+Follow [IC-V2-ARCHITECTURE.md](IC-V2-ARCHITECTURE.md), sections 3–5. Older addenda below describe the v1.1 on-chain snapshot path. V2 leader and protocol validators independently fetch and validate each external artifact through the same pinned adapter. Review exactly the complete decoded bytes whose SHA-256 was verified, with no trim/normalization/rendered substitute/prefix slicing.
+
+Initial proposed caps: 4 KiB/artifact, 8 KiB total across three artifacts; full-artifact semantic review without chunking. If chunking becomes necessary after measurement, require contiguous UTF-8 offsets, complete ordered chunk identities/digests, reconstruction hash and full cross-chunk review in both leader and validators. Partial/missing chunks never pass. Redirect-control and raw-response behavior on the pinned SDK must be proven before enabling external acquisition. Hash completeness alone does not prove semantic correctness; adversarial tests remain required.
+
 ## Addendum v0.4 — shared reviewer rubric
 
 Use one shared coverage-policy string in derivation and grounding so that two prompts cannot accidentally apply different standards. Review every requested topic, including the final topic; require explicit content or an explicit unknown statement, allowing semantic paraphrases. A timing statement alone is not an answer about authorization/eligibility/cost prerequisites. Keep complete immutable snapshots, independent derivation, exact per-obligation status comparison, and evidence-grounding verification.

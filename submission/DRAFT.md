@@ -4,7 +4,7 @@ Track: Future of Work
 
 Repository: https://github.com/tanphung/tasktrace
 
-Website: https://tasktrace-work.tanphung6666.chatgpt.site/#job=bradbury-happy-a5bc7d15
+Website: https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15
 
 ## One-liner (maximum 180 characters)
 
@@ -29,7 +29,7 @@ Two similar wrong reports can assign responsibility to different stages, based o
 
 ## Final submission checks — do not paste unresolved items as completed claims
 
-- Public website: published and browser-verified without authentication on 09/09/2026. It loaded the finalized Bradbury job, all four findings and the exact verified recipient balance delta.
+- Public website: deployed to the neutral Vercel production alias and browser-verified without authentication on 09/09/2026. It loaded the finalized Bradbury job, all four findings and the exact verified recipient balance delta.
 - Bradbury contract: `0x3FC5dce3abadf149111A45ae9936eBdD7A67AA88`; deploy tx `0xb98884870579ce28d933677f1fe1889f227c86c7b3c302c3c51aef9a1d7e44d2`; source hash matches v1.1.
 - GitHub account linked to portal: not verified.
 - StudioNet release-candidate stability is verified: 16/16 live consensus cases passed, all 113 tracked integration steps are `FINALIZED_SUCCESS`, and a separate seven-transaction React/provider happy path passed against finalized state.

@@ -1,6 +1,15 @@
 # V2 preflight — 10 September 2026
 
-Status: BLOCKED at the official SDK/runtime capability gate. Not a completed v2,
+11 September update: see [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). An official
+WASI-level EVM adapter now has local tests preserving exact value/address and a
+successful real GenVM v0.2.12 controlled-host execution. The high-level proxy
+still fails and is not selected. Native router/finality remain unverified. A
+real GenVM + official local web-module probe now confirms redirect safety is
+unavailable: a cross-host redirect is followed and only final 200/body reaches
+the IC. The historical observations below have not been erased.
+
+Status: PARTIALLY UNBLOCKED for the selected EVM transport, still BLOCKED at the
+official web redirect and live EVM finality capability gates. Not a completed v2,
 not a deployment approval request, and not proof of live validator execution.
 The user approved implementation, not waiving requirements or deployment.
 
@@ -9,11 +18,13 @@ The user approved implementation, not waiving requirements or deployment.
 - Read the approved architecture and all four security design documents.
 - Inspected the exact installed runner and its transitive SDK, plus official
   GenVM source at `ea1de32ffbcdec286e665f10043a124848901237` (v0.2.12).
-- Added executable tests using the SDK's public typed EVM interface. Only the
+- Added executable diagnostics using the SDK's public typed EVM interface. Only the
   host-call boundary is intercepted; proxy construction and ABI encoding are
   the unmodified official implementation. No real wallet or network writes.
-- Included feasibility tests in default pytest discovery, so a passing v1 suite
-  cannot conceal a failing v2 prerequisite. No xfail/skip conversion.
+- Included feasibility tests in default pytest discovery. The two known broken
+  high-level EVM behaviors are now locked as explicit diagnostics because the
+  production core uses the documented WASI interface instead. There is no
+  xfail/skip conversion; raw original failures remain preserved.
 
 ## Exact versions and results
 
@@ -41,9 +52,11 @@ tests, not completed v2 adversarial coverage. Raw failures:
 | Full local integration | Docker CLI installed, daemon unreachable at docker_engine pipe | No running full local GenVM environment established; Studio alone cannot prove native IC/EVM round trip |
 
 The first two are executable SDK reproductions, not claims that a transaction
-was broadcast and lost funds. The third is a capability inspection test, NOT a
-live HTTP redirect integration test. It can be replaced only with a documented
-supported API and real-runtime no-follow proof, not by patching the test mock.
+was broadcast and lost funds. They no longer gate the selected WASI transport,
+which has its own direct and real-GenVM tests. The redirect observation is now
+also backed by a real local GenVM/web-module test; that diagnostic passes by
+proving the production capability must remain closed. It can be reopened only
+with a documented supported API and real-runtime no-follow proof.
 
 ## Root-cause evidence
 
@@ -78,8 +91,9 @@ Reproduction SDK file SHA-256:
 ## Next dependency, without weakening requirements
 
 Need official GenLayer confirmation/documentation of a supported concrete
-runner + host web API which enforces no redirects, plus a working supported
-native EVM view/value-send path and read finality semantics. A provider HTTP
+runner + host web API which enforces no redirects, plus native EVM read finality
+semantics and a live router test. Exact EVM view/value-send bytes are no longer
+blocked at the GenVM host ABI layer. A provider HTTP
 signature or two-message router funding design would materially change the
 approved architecture and requires a separate security review and user choice;
 neither is silently substituted.

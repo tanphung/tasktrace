@@ -6,7 +6,7 @@ Accountability for two-stage work handoffs, with evidence-based adjudication on 
 
 Intended Agent Tank hackathon track: **Future of Work**. The project is not an approved or submitted hackathon entry yet.
 
-Public demo: **https://tasktrace-work.tanphung6666.chatgpt.site/#job=bradbury-happy-a5bc7d15**
+Public demo: **https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15**
 
 The production URL was verified on 9 September 2026 without signing in. It loaded the finalized Bradbury job, all four `SATISFIED` findings, and the exact `+0.03 GEN` recipient-payment evidence.
 

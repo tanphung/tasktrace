@@ -1,5 +1,7 @@
 # TaskTrace — Kế hoạch xây và nộp Agent Tank Hackathon
 
+> Kế hoạch gốc được giữ làm lịch sử. Từ 09/09/2026, dùng [kế hoạch hoàn thiện cạnh tranh](COMPETITIVE-RELEASE-PLAN.md) cho phạm vi, thứ tự công việc và điều kiện bàn giao hiện hành.
+
 Ngày kiểm tra: 05/09/2026 · Múi giờ: UTC+7
 
 Trạng thái khi lập kế hoạch: đề xuất sản phẩm; chưa triển khai contract, chưa nộp bài. Xem RESUME.md để biết tiến độ hiện tại.
