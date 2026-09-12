@@ -1,5 +1,12 @@
 # V2 preflight — 10 September 2026
 
+12 September status: this file is historical preflight evidence. The selected
+WASI adapter, full IC lifecycle and receipt router are now implemented in
+`contracts/tasktrace_v2.py` and `contracts/TaskTraceReceiptRouter.sol`; component
+gates pass as recorded in [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). The remaining
+gate is native full-environment integration, not the three original SDK probes.
+No v2 public deployment is claimed.
+
 11 September update: see [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). An official
 WASI-level EVM adapter now has local tests preserving exact value/address and a
 successful real GenVM v0.2.12 controlled-host execution. The high-level proxy

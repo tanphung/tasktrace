@@ -1,13 +1,23 @@
 # TaskTrace v2 — Intelligent Contract architecture proposal
 
+12/09/2026 implementation update: this architecture now has a local release
+candidate in `contracts/tasktrace_v2.py` plus the minimal
+`contracts/TaskTraceReceiptRouter.sol`. Funding, immutable submissions,
+independent acquisition/review, complete structured reports, deterministic
+timeouts/entitlements, routing and exact released-receipt confirmation are public
+IC lifecycle methods. GenVM lint and all current component/regression suites pass.
+It is still **not deployed**: native full-environment integration and fresh user
+approval remain release gates. Earlier draft/preflight notes below are retained as
+design history and are superseded where they describe features as unimplemented.
+
 09/09/2026 architecture baseline. Implementation status is tracked below; no
 v2 deployment is claimed.
 
-10/09/2026 preflight: approved implementation has begun with capability tests;
+10/09/2026 historical preflight: approved implementation began with capability tests;
 three SDK gates currently fail. See [V2-FEASIBILITY.md](V2-FEASIBILITY.md).
 External adapter and receipt-router implementation remain gated; no deployment.
 
-11/09/2026: isolated deterministic core and callback implementation now exists;
+11/09/2026 historical checkpoint: isolated deterministic core and callback implementation existed;
 see [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). Draft-only public interface cannot
 receive funds or accept external reports. A documented WASI message adapter is
 has passed a real pinned-GenVM controlled-host ABI probe as the replacement for

@@ -1,4 +1,27 @@
-# V2 core implementation checkpoint — 11 September 2026
+# V2 release-candidate checkpoint — 12 September 2026
+
+Current source is `contracts/tasktrace_v2.py`, not the former draft-only
+`tasktrace_v2_core.py`. The IC now exposes the complete funded lifecycle,
+independently acquires all committed GitHub bytes in leader and validator runs,
+stores the full structured report, applies deterministic deadline/settlement
+rules and confirms only an exact released router receipt. The production v1.1
+deployment remains unchanged and v2 is not deployed.
+
+The minimal Solidity router is `contracts/TaskTraceReceiptRouter.sol`; adversarial
+recipient contracts live only under `tests/evm/`. Latest component gates are:
+
+- GenVM lint: 3 checks and ABI validation pass; 3 views and 9 writes.
+- V2 direct suite: 157 passed; full Python regression: 252 passed.
+- Router: 16 EVM cases pass, including wrong recipient, duplicate receipt,
+  recipient revert and reentrancy.
+- Frontend/receipt regression: 67 passed; TypeScript/Vite build passes.
+
+Native local GenVM/committee integration, real router round-trip and the v2 UI
+deployment profile are still release gates. The 11 September text below is kept
+as historical evidence of how the implementation evolved; its “disabled” and
+“unimplemented” statements no longer describe the current source.
+
+## Historical 11 September core checkpoint
 
 This is implemented local work, NOT a funded/deployed v2 application. The live
 v1.1 contract and UI configuration are unchanged. User retains submission and
@@ -6,7 +29,7 @@ new-contract deployment approval. Wallet permission is not a waiver of tests.
 
 ## Implemented in Intelligent Contract source
 
-`contracts/tasktrace_v2_core.py` uses the original concrete runner hash. Its only
+`contracts/tasktrace_v2_core.py` used the original concrete runner hash. Its only
 write entry point stores immutable **unfunded** draft terms with authenticated
 client, distinct workers, chain/contract/deal domain and canonical terms hash.
 It explicitly reports funding, external review and settlement as disabled.

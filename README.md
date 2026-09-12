@@ -10,6 +10,23 @@ Public demo: **https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d1
 
 The production URL was verified on 9 September 2026 without signing in. It loaded the finalized Bradbury job, all four `SATISFIED` findings, and the exact `+0.03 GEN` recipient-payment evidence.
 
+## V2 release candidate (local, not deployed)
+
+The next contract is implemented in `contracts/tasktrace_v2.py`; the production
+site intentionally remains on the separately verified v1.1 deployment until the
+v2 release gate and fresh deployment approval are complete. V2 moves the entire
+settlement-affecting path into the Intelligent Contract: exact funded obligation
+IDs, independently refetched GitHub artifacts, whole-artifact SHA-256 and semantic
+review, structured reports, deterministic timeouts/entitlements, and exact router
+receipt confirmation. `contracts/TaskTraceReceiptRouter.sol` only executes and
+records the IC-selected transfer; it cannot choose a verdict or recipient.
+
+Current local checks: GenVM lint passes; 252 Python direct/adversarial regression
+tests pass (157 in the v2 contract suite); 65 React tests plus two receipt tests
+pass; and 16 in-process EVM router cases pass. These component results are not a
+Bradbury deployment claim. Full native GenVM/committee integration and public v2
+configuration remain mandatory before release.
+
 ## The idea
 
 A client assigns an extraction task to worker/agent A, then a reporting task to worker/agent B. When a report is wrong, TaskTrace asks where the error entered the chain. B is not automatically penalized for faithfully passing on an upstream A error. A separate, optional duty makes B responsible for checking the original source too.
@@ -83,7 +100,9 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 $env:GENVM_VERSION = 'v0.2.12'
 .venv/Scripts/genvm-lint.exe check contracts/tasktrace.py --json
+.venv/Scripts/genvm-lint.exe check contracts/tasktrace_v2.py --json
 .venv/Scripts/python.exe -m pytest tests/direct tests/adversarial -q
+npm run test:router
 ```
 
 The direct test harness has a narrow Windows compatibility workaround for an upstream temporary-file unlink issue. It also explicitly updates the deterministic message timestamp in tests. Neither workaround substitutes for live integration validation.

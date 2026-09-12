@@ -1,4 +1,23 @@
-# Mốc tiếp tục TaskTrace — cập nhật 11/09/2026
+# Mốc tiếp tục TaskTrace — cập nhật 12/09/2026
+
+## Trạng thái hiện hành — v2 release candidate, chưa deploy
+
+Source hiện tại là `contracts/tasktrace_v2.py` và
+`contracts/TaskTraceReceiptRouter.sol`; file draft `tasktrace_v2_core.py` đã được
+thay thế. IC đã có trọn lifecycle funding → accept → immutable GitHub commitment
+→ independent consensus review → structured report → deterministic settlement
+→ exact released-receipt confirmation. Lint đạt; v2 direct 157/157, toàn bộ Python
+252/252, frontend/receipt 67/67 và router EVM 16/16. Production vẫn cố ý giữ v1.1;
+v2 chưa deploy, chưa được chọn trong frontend.
+
+Đang hoàn tất native Localnet/committee integration và profile UI v2. GenLayer
+CLI 0.39.2 cần Localnet image `v0.65.0`; dùng image `latest` gây sai lệch compose
+(DB/Redis) và không phải lỗi TaskTrace. Không reset/xóa database local của người
+dùng. Sau khi full integration và toàn bộ release gate đạt, phải xin xác nhận mới
+trước deploy Bradbury như `AGENTS.md`.
+
+Các mốc 10–11/09 bên dưới là lịch sử và bị phần hiện hành này thay thế nếu mâu
+thuẫn.
 
 ## Tiến độ mới nhất — đã code lõi v2, chưa phải dApp v2 hoàn chỉnh
 

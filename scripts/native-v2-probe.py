@@ -81,7 +81,7 @@ class ControlledHost(IHost):
 
 
 async def main():
-    source = (root / "contracts/tasktrace_v2_core.py").read_bytes()
+    source = (root / "contracts/tasktrace_v2.py").read_bytes()
     probe = b'''
 _probe_target = Address("0x" + "44" * 20)
 _probe_call = gl.evm.MethodEncoder("released", (u256,), u256).encode_call((u256(7),))
@@ -102,7 +102,7 @@ def _probe_capabilities(self):
     result = gl.eq_principle.strict_eq(_probe_request)
     print("TASKTRACE_NATIVE_WEB_RESPONSE=" + json.dumps(result, sort_keys=True))
     return json.dumps(result)
-TaskTraceV2Core.get_capabilities = gl.public.view(_probe_capabilities)
+TaskTraceV2.get_capabilities = gl.public.view(_probe_capabilities)
 ''' % args.web_url).encode()
     addr = Address("0x" + "11" * 20)
     payload = calldata.encode({

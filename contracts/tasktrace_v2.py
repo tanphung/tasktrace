@@ -6,13 +6,15 @@ import json
 import re
 import base64
 import binascii
+from datetime import datetime, timezone
 import _genlayer_wasi
 import genlayer.py.calldata as gen_calldata
 
 
-# Local v2 core milestone. No funding, external acquisition, or settlement entry
-# point exists until the runtime gates pass. Never select this as the live dApp.
-VERSION = "tasktrace-2-core-draft"
+# Local v2 release candidate. Funding, independent external acquisition and
+# receipt-bound settlement are implemented, but this source is not deployed.
+# Never select it in the public UI until every release gate and user approval.
+VERSION = "tasktrace-2.0-rc"
 MAX_ARTIFACT = 4096
 MAX_TOTAL = 8192
 MAX_REPORT = 32768
@@ -69,6 +71,13 @@ def _json(value):
 
 def _digest(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def _now():
+    value = datetime.fromisoformat(gl.message_raw["datetime"].replace("Z", "+00:00"))
+    _require(value.tzinfo is not None, "CHAIN_TIME")
+    delta = value - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    return delta.days * 86400 + delta.seconds
 
 
 def _pairs(pairs):
@@ -210,7 +219,7 @@ def _provider_json(status, headers, body):
         key = key.lower()
         _require(key not in normalized, "DUPLICATE_HTTP_HEADER")
         normalized[key] = value
-    _require(normalized.get("content-type") in (b"application/json", b"application/json; charset=utf-8", b"application/vnd.github+json"), "HTTP_CONTENT_TYPE")
+    _require(normalized.get("content-type") in (b"application/json", b"application/json; charset=utf-8", b"application/vnd.github+json", b"application/vnd.github+json; charset=utf-8"), "HTTP_CONTENT_TYPE")
     _require(type(body) is bytes and 1 <= len(body) <= 65536, "HTTP_BODY_SIZE")
     try:
         text = body.decode("utf-8")
@@ -219,6 +228,92 @@ def _provider_json(status, headers, body):
     value = _load(text, 65536)
     _require(type(value) is dict, "HTTP_JSON_OBJECT")
     return value
+
+
+def _github_fetch(url, cache):
+    # URLs are assembled only from fields already accepted by _origin,
+    # _commitment and _hex. No caller-supplied URL reaches this adapter.
+    if url not in cache:
+        response = gl.nondet.web.get(url, headers={
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "TaskTrace-GenLayer-v2",
+        })
+        cache[url] = _provider_json(response.status, response.headers, response.body)
+    return cache[url]
+
+
+def _acquire_github(commitment, cache):
+    origin = commitment["origin"]
+    _commitment(commitment, origin)
+    base = "https://api.github.com/repos/" + origin["owner"] + "/" + origin["repository"]
+    repository = _github_fetch(base, cache)
+    commit = _github_fetch(base + "/git/commits/" + commitment["commit"], cache)
+    expected_tree = _hex(commit.get("tree", {}).get("sha"), 40, "TREE_ID")
+    trees = []
+    for segment in commitment["path"].split("/"):
+        tree = _github_fetch(base + "/git/trees/" + expected_tree, cache)
+        trees.append(tree)
+        entries = tree.get("tree") if type(tree) is dict else None
+        _require(type(entries) is list, "TREE_RESPONSE")
+        matches = [entry for entry in entries if type(entry) is dict and entry.get("path") == segment]
+        _require(len(matches) == 1, "TREE_PATH_MEMBERSHIP")
+        expected_tree = _hex(matches[0].get("sha"), 40, "TREE_OBJECT_ID")
+    blob = _github_fetch(base + "/git/blobs/" + commitment["blob"], cache)
+    raw = _github_bundle(commitment, repository, commit, trees, blob)
+    provenance = {
+        "adapter": "github-commit-v1",
+        "provider": origin["provider"],
+        "hostname": origin["hostname"],
+        "owner": origin["owner"],
+        "owner_id": origin["owner_id"],
+        "repository": origin["repository"],
+        "repository_id": origin["repository_id"],
+        "commit": commitment["commit"],
+        "blob": commitment["blob"],
+        "path": commitment["path"],
+        "content_type": commitment["content_type"],
+        "byte_length": commitment["byte_length"],
+        "sha256": commitment["sha256"],
+        "status": "VERIFIED",
+    }
+    return {"commitment": commitment, "bytes": raw, "provenance": provenance}
+
+
+def _acquire_all(commitments):
+    _require(type(commitments) is dict and set(commitments) == set(ROLES), "INCOMPLETE_ARTIFACTS")
+    cache = {}
+    return {role: _acquire_github(commitments[role], cache) for role in ROLES}
+
+
+def _wire_artifacts(artifacts):
+    _require(type(artifacts) is dict and set(artifacts) == set(ROLES), "INCOMPLETE_ARTIFACTS")
+    result = {}
+    for role in ROLES:
+        item = artifacts[role]
+        _artifact_bytes(item["commitment"], item["bytes"])
+        result[role] = {
+            "commitment": item["commitment"],
+            "content_base64": base64.b64encode(item["bytes"]).decode("ascii"),
+            "provenance": item["provenance"],
+        }
+    return result
+
+
+def _unwire_artifacts(value):
+    _require(type(value) is dict and set(value) == set(ROLES), "INCOMPLETE_ARTIFACTS")
+    result = {}
+    for role in ROLES:
+        item = value[role]
+        _object(item, ("commitment", "content_base64", "provenance"), "ARTIFACT_WIRE_SCHEMA")
+        encoded = _text(item["content_base64"], 6000, "ARTIFACT_BASE64")
+        try:
+            raw = base64.b64decode(encoded, validate=True)
+        except (ValueError, binascii.Error):
+            raise gl.vm.UserError("ARTIFACT_BASE64")
+        _artifact_bytes(item["commitment"], raw)
+        result[role] = {"commitment": item["commitment"], "bytes": raw, "provenance": item["provenance"]}
+    return result
 
 
 def _terms(raw):
@@ -308,7 +403,8 @@ def _candidate(raw, obligations, artifacts):
         _require(len(missing) == len(set(missing)) and set(missing) <= set(obligation["evidence_ids"]), "MISSING_ITEMS")
         _require(not missing or row["status"] == "UNASSESSABLE", "MISSING_DETERMINATE")
         citations = row["citations"]
-        _require(type(citations) is list and 1 <= len(citations) <= 4, "CITATION_COUNT")
+        minimum_citations = 0 if row["status"] == "UNASSESSABLE" and missing else 1
+        _require(type(citations) is list and minimum_citations <= len(citations) <= 4, "CITATION_COUNT")
         seen_roles = set()
         expanded = []
         seen_quotes = set()
@@ -325,7 +421,7 @@ def _candidate(raw, obligations, artifacts):
             seen_quotes.add((role, start))
             seen_roles.add(role)
             expanded.append({**citation, "start_byte": start, "end_byte": start + len(quote)})
-        _require(set(obligation["evidence_ids"]) <= seen_roles, "MISSING_CITATION_SOURCE")
+        _require(set(obligation["evidence_ids"]) - set(missing) == seen_roles, "MISSING_CITATION_SOURCE")
         normalized.append({**row, "citations": expanded, "missing_evidence_ids": sorted(missing)})
     return {"reviewed_artifacts": [reviewed[r] for r in ROLES], "assessments": normalized}
 
@@ -582,12 +678,22 @@ def _validate_semantic_leader(obligations, acquire, leader_result):
     return False
 
 
-def _review_consensus(obligations, acquire):
+def _review_consensus(obligations, commitments):
     def leader():
-        return _wire_candidate(_derive_semantics(obligations, acquire()))
+        artifacts = _acquire_all(commitments)
+        return {"artifacts": _wire_artifacts(artifacts), "semantic": _wire_candidate(_derive_semantics(obligations, artifacts))}
 
     def validator(result):
-        return _validate_semantic_leader(obligations, acquire, result)
+        if not isinstance(result, gl.vm.Return) or type(result.calldata) is not dict or set(result.calldata) != {"artifacts", "semantic"}:
+            return False
+        independent = _acquire_all(commitments)
+        try:
+            proposed_artifacts = _unwire_artifacts(result.calldata["artifacts"])
+            if _json(_wire_artifacts(independent)) != _json(_wire_artifacts(proposed_artifacts)):
+                return False
+        except gl.vm.UserError:
+            return False
+        return _validate_semantic_leader(obligations, lambda: independent, gl.vm.Return(result.calldata["semantic"]))
 
     return gl.vm.run_nondet_unsafe(leader, validator)
 
@@ -617,15 +723,218 @@ def _evm_send_exact(router, calldata, amount):
         raise gl.vm.UserError("EVM_SEND_UNEXPECTED_RESULT")
 
 
-class TaskTraceV2Core(gl.Contract):
-    drafts: TreeMap[str, str]
+def _receipt_id(deal, leg):
+    identity = {
+        "chain_id": deal["chain_id"],
+        "router": deal["router"],
+        "source_contract": deal["contract"],
+        "deal_id": deal["deal_id"],
+        "role": leg["role"],
+        "sequence": leg["sequence"],
+        "terms_hash": deal["terms_hash"],
+        "decision_hash": deal["decision_hash"],
+        "recipient": leg["recipient"],
+        "amount": leg["amount"],
+        "kind": leg["kind"],
+    }
+    return _digest(("TASKTRACE_RECEIPT_V2\n" + _json(identity)).encode("utf-8"))
 
-    def __init__(self):
-        pass
+
+def _receipt_expected(deal, leg, state):
+    return {
+        "chain_id": deal["chain_id"], "router": deal["router"],
+        "source_contract": deal["contract"], "deal_id": deal["deal_id"],
+        "role": leg["role"], "sequence": leg["sequence"],
+        "terms_hash": deal["terms_hash"], "decision_hash": deal["decision_hash"],
+        "receipt_id": leg["receipt_id"], "recipient": leg["recipient"],
+        "amount": leg["amount"], "kind": leg["kind"], "state": state,
+    }
+
+
+def _receipt_digest(receipt):
+    _require(type(receipt) is dict and receipt.get("state") in ("FUNDED", "RELEASED"), "RECEIPT_STATE")
+    released_shape = {**receipt, "state": "RELEASED"}
+    _receipt_matches(released_shape, released_shape)
+    role = 1 if receipt["role"] == "A" else 2
+    kind = {"PAYOUT": 1, "REFUND": 2, "BOND_RETURN": 3}[receipt["kind"]]
+    state = 2 if receipt["state"] == "RELEASED" else 1
+    packed = (
+        b"TASKTRACE_RECEIPT_V2\x00"
+        + int(receipt["chain_id"]).to_bytes(32, "big")
+        + Address(receipt["router"]).as_bytes
+        + Address(receipt["source_contract"]).as_bytes
+        + bytes.fromhex(_digest(receipt["deal_id"].encode("utf-8")))
+        + bytes([role])
+        + int(receipt["sequence"]).to_bytes(4, "big")
+        + bytes.fromhex(receipt["terms_hash"])
+        + bytes.fromhex(receipt["decision_hash"])
+        + bytes.fromhex(receipt["receipt_id"])
+        + Address(receipt["recipient"]).as_bytes
+        + int(receipt["amount"]).to_bytes(32, "big")
+        + bytes([kind, state])
+    )
+    return _digest(packed)
+
+
+def _router_fund_calldata(receipt):
+    encoder = gl.evm.MethodEncoder(
+        "fund",
+        (gl.evm.bytes32, gl.evm.bytes32, u8, u32, gl.evm.bytes32, gl.evm.bytes32, Address, u8),
+        type(None),
+    )
+    return encoder.encode_call((
+        bytes.fromhex(receipt["receipt_id"]),
+        bytes.fromhex(_digest(receipt["deal_id"].encode("utf-8"))),
+        u8(1 if receipt["role"] == "A" else 2),
+        u32(receipt["sequence"]),
+        bytes.fromhex(receipt["terms_hash"]),
+        bytes.fromhex(receipt["decision_hash"]),
+        Address(receipt["recipient"]),
+        u8({"PAYOUT": 1, "REFUND": 2, "BOND_RETURN": 3}[receipt["kind"]]),
+    ))
+
+
+def _router_receipt_digest(router, receipt_id):
+    encoder = gl.evm.MethodEncoder("receiptDigest", (gl.evm.bytes32,), gl.evm.bytes32)
+    raw = _evm_read_exact(router, encoder.encode_call((bytes.fromhex(receipt_id),)))
+    value = encoder.decode_ret(raw)
+    _require(type(value) is bytes and len(value) == 32, "ROUTER_RECEIPT_RESPONSE")
+    return value.hex()
+
+
+def _deterministic_assessments(obligations):
+    reasons = {
+        "SYS_REVIEW": "Review used the frozen evidence manifest and contract-defined validator.",
+        "SYS_UNWIND": "The pre-funded neutral unwind rule remains enforceable at expiry.",
+        "SYS_REVISIONS": "The contract accepted revision zero only.",
+    }
+    result = []
+    for obligation in obligations:
+        if obligation["kind"] != "DETERMINISTIC":
+            continue
+        obligation_id = obligation["id"]
+        if obligation_id.startswith("SYS_ACCEPT_"):
+            reason = "The designated worker accepted the exact funded terms before deadline."
+        elif obligation_id.startswith("SYS_DELIVERY_"):
+            reason = "The designated worker submitted one immutable artifact before deadline."
+        elif obligation_id.startswith("SYS_UPSTREAM_"):
+            reason = "The submission references the exact required upstream artifact."
+        elif obligation_id.startswith("SYS_PROVENANCE_"):
+            reason = "The complete artifact passed the committed GitHub provenance adapter."
+        elif obligation_id.startswith("SYS_MONEY_"):
+            reason = "Fees, bond and penalty remain the exact funded deterministic terms."
+        else:
+            reason = reasons[obligation_id]
+        result.append({"obligation_id": obligation_id, "status": "SATISFIED", "applicable": True, "reason": reason})
+    return result
+
+
+def _settlement_legs(deal, report):
+    legs = []
+    for role in ("A", "B"):
+        outcome = report["decision"]["stages"][role]["outcome"]
+        values = report["decision"]["stages"][role]["entitlements"]
+        recipient_for = {"PAYOUT": deal["manifest"]["terms"]["workers"][role], "BOND_RETURN": deal["manifest"]["terms"]["workers"][role], "REFUND": deal["manifest"]["client"]}
+        for kind in ("PAYOUT", "REFUND", "BOND_RETURN"):
+            amount = values[kind]
+            if int(amount) == 0:
+                continue
+            leg = {"id": role + ":" + kind, "role": role, "sequence": len(legs), "recipient": recipient_for[kind], "amount": amount, "kind": kind, "outcome": outcome, "state": "ELIGIBLE"}
+            leg["receipt_id"] = _receipt_id(deal, leg)
+            legs.append(leg)
+    _require(sum(int(leg["amount"]) for leg in legs) == int(deal["ledger"]["received"]), "SETTLEMENT_CONSERVATION")
+    return legs
+
+
+def _timeout_report(deal, reason_code, outcomes, violated_ids):
+    obligations = deal["manifest"]["obligations"]
+    terms = deal["manifest"]["terms"]
+    assessments = []
+    findings = []
+    missing_items = []
+    for obligation in obligations:
+        obligation_id = obligation["id"]
+        if obligation["kind"] == "SEMANTIC":
+            missing = list(obligation["evidence_ids"])
+            assessment = {"obligation_id": obligation_id, "kind": "SEMANTIC", "stage": obligation["stage"], "status": "UNASSESSABLE", "applicable": True, "reason": "Semantic review did not complete before the deterministic lifecycle deadline.", "citation_ids": [], "missing_evidence_ids": missing}
+            for evidence_id in missing:
+                missing_items.append({"obligation_id": obligation_id, "evidence_id": evidence_id, "reason_code": reason_code})
+        else:
+            status = "VIOLATED" if obligation_id in violated_ids else "SATISFIED"
+            applicable = True
+            if obligation_id.startswith("SYS_PROVENANCE_") or obligation_id == "SYS_REVIEW":
+                status = "UNASSESSABLE"
+                applicable = False
+            assessment = {"obligation_id": obligation_id, "kind": "DETERMINISTIC", "stage": None, "status": status, "applicable": applicable, "reason": reason_code, "citation_ids": [], "missing_evidence_ids": []}
+        assessments.append(assessment)
+        if assessment["status"] == "VIOLATED":
+            findings.append({"id": "F" + str(len(findings) + 1).zfill(3), "obligation_id": obligation_id, "severity": "MATERIAL", "summary": reason_code, "citation_ids": []})
+    _exact_report_ids(assessments, obligations)
+    sources = []
+    for role in ROLES:
+        submitted = deal["artifacts"].get(role)
+        commitment = submitted.get("commitment") if type(submitted) is dict else None
+        sources.append({"artifact_id": role, "status": "NOT_VERIFIED" if commitment else "MISSING", "commitment": commitment, "reason_code": reason_code})
+    stages = {role: {"outcome": outcomes[role], "entitlements": _entitlements(terms["money"][role], outcomes[role])} for role in ("A", "B")}
+    report = {
+        "schema_version": "tasktrace-report-2", "chain_domain": str(deal["chain_id"]),
+        "contract": deal["contract"], "job_id": deal["deal_id"],
+        "review_id": _digest((deal["deal_id"] + ":timeout:" + reason_code).encode("utf-8")),
+        "revision": 0, "terms_hash": deal["terms_hash"],
+        "evidence_manifest_hash": deal.get("evidence_manifest_hash", _digest(_json(deal["artifacts"]).encode("utf-8"))),
+        "reviewed_at": str(_now()), "source_assessments": sources,
+        "obligation_assessments": assessments, "findings": findings,
+        "reasoning": "The Intelligent Contract applied a pre-funded deterministic timeout rule: " + reason_code + ".",
+        "evidence_citations": [], "missing_items": missing_items,
+        "score": {"A": None, "B": None},
+        "decision": {"stages": stages, "next_state": "READY_FOR_SETTLEMENT"},
+    }
+    _text(_json(report), MAX_REPORT, "REPORT_SIZE")
+    return report
+
+
+def _unactivated_legs(deal):
+    terms = deal["manifest"]["terms"]
+    legs = []
+    for role in ("A", "B"):
+        values = [("REFUND", terms["money"][role]["fee"], deal["manifest"]["client"])]
+        if deal["accepted"][role]:
+            values.append(("BOND_RETURN", terms["money"][role]["bond"], terms["workers"][role]))
+        for kind, amount, recipient in values:
+            leg = {"id": role + ":" + kind, "role": role, "sequence": len(legs), "recipient": recipient, "amount": amount, "kind": kind, "outcome": "UNASSESSABLE", "state": "ELIGIBLE"}
+            leg["receipt_id"] = _receipt_id(deal, leg)
+            legs.append(leg)
+    _require(sum(int(leg["amount"]) for leg in legs) == int(deal["ledger"]["received"]), "SETTLEMENT_CONSERVATION")
+    return legs
+
+
+class TaskTraceV2(gl.Contract):
+    drafts: TreeMap[str, str]
+    order: DynArray[str]
+    router: str
+
+    def __init__(self, router: str):
+        self.router = _address(router)
+
+    def _load_deal(self, deal_id: str):
+        _require(deal_id in self.drafts, "DEAL_NOT_FOUND")
+        return _load(self.drafts[deal_id])
+
+    def _save_deal(self, deal):
+        self.drafts[deal["deal_id"]] = _json(deal)
+
+    def _participant(self, deal):
+        sender = str(gl.message.sender_address)
+        if sender == deal["manifest"]["client"]:
+            return "CLIENT"
+        for role in ("A", "B"):
+            if sender == deal["manifest"]["terms"]["workers"][role]:
+                return role
+        raise gl.vm.UserError("PARTICIPANT_ONLY")
 
     @gl.public.view
     def get_capabilities(self) -> str:
-        return _json({"version": VERSION, "funding": False, "external_review": False, "settlement": False, "status": "LOCAL_CORE_ONLY"})
+        return _json({"version": VERSION, "funding": True, "external_review": True, "settlement": True, "router": str(self.router), "status": "RELEASE_CANDIDATE_NOT_DEPLOYED"})
 
     @gl.public.write
     def create_terms(self, deal_id: str, terms_json: str) -> None:
@@ -634,10 +943,186 @@ class TaskTraceV2Core(gl.Contract):
         terms = _terms(terms_json)
         client = str(gl.message.sender_address)
         _require(client not in terms["workers"].values(), "DISTINCT_CLIENT")
-        manifest = {"version": VERSION, "chain_domain": str(gl.message.chain_id), "contract": str(gl.message.contract_address), "deal_id": deal_id, "client": client, "terms": terms, "obligations": _obligations(terms, client)}
-        self.drafts[deal_id] = _json({"status": "DRAFT_UNFUNDED", "manifest": manifest, "terms_hash": _digest(_json(manifest).encode("utf-8"))})
+        manifest = {"version": VERSION, "chain_domain": str(gl.message.chain_id), "contract": str(gl.message.contract_address), "router": str(self.router), "deal_id": deal_id, "client": client, "terms": terms, "obligations": _obligations(terms, client)}
+        deal = {"deal_id": deal_id, "chain_id": int(gl.message.chain_id), "contract": str(gl.message.contract_address), "router": str(self.router), "status": "DRAFT_UNFUNDED", "manifest": manifest, "terms_hash": _digest(_json(manifest).encode("utf-8")), "accepted": {"A": False, "B": False}, "artifacts": {"SOURCE": {"commitment": terms["source"], "issuer": client, "revision": 0, "upstream_submission_id": "", "submission_id": _digest(_json({"deal_id": deal_id, "role": "SOURCE", "issuer": client, "revision": 0, "commitment": terms["source"]}).encode("utf-8"))}}, "ledger": {"received": "0", "routed": "0", "confirmed": "0"}, "settlement_legs": []}
+        self._save_deal(deal)
+        self.order.append(deal_id)
+
+    @gl.public.write.payable
+    def fund_terms(self, deal_id: str, terms_hash: str) -> None:
+        deal = self._load_deal(deal_id)
+        _require(deal["status"] == "DRAFT_UNFUNDED", "DEAL_NOT_DRAFT")
+        _require(str(gl.message.sender_address) == deal["manifest"]["client"], "CLIENT_ONLY")
+        _require(terms_hash == deal["terms_hash"], "TERMS_HASH_MISMATCH")
+        terms = deal["manifest"]["terms"]
+        expected = sum(int(terms["money"][role]["fee"]) for role in ("A", "B"))
+        _require(int(gl.message.value) == expected, "EXACT_FEE_FUNDING")
+        now = _now()
+        deal.update({"status": "FUNDED", "funded_at": now, "accept_deadline": now + terms["windows"]["accept"]})
+        deal["ledger"]["received"] = str(expected)
+        self._save_deal(deal)
+
+    @gl.public.write.payable
+    def accept_work(self, deal_id: str, terms_hash: str) -> None:
+        deal = self._load_deal(deal_id)
+        role = self._participant(deal)
+        _require(role in ("A", "B"), "WORKER_ONLY")
+        _require(deal["status"] == "FUNDED" and _now() < deal["accept_deadline"], "ACCEPT_WINDOW_CLOSED")
+        _require(not deal["accepted"][role], "ALREADY_ACCEPTED")
+        _require(terms_hash == deal["terms_hash"], "TERMS_HASH_MISMATCH")
+        bond = int(deal["manifest"]["terms"]["money"][role]["bond"])
+        _require(int(gl.message.value) == bond, "EXACT_BOND_FUNDING")
+        deal["accepted"][role] = True
+        deal["ledger"]["received"] = str(int(deal["ledger"]["received"]) + bond)
+        if all(deal["accepted"].values()):
+            now = _now()
+            deal.update({"status": "ACTIVE_A", "activated_at": now, "a_deadline": now + deal["manifest"]["terms"]["windows"]["step"]})
+        self._save_deal(deal)
+
+    @gl.public.write
+    def submit_artifact(self, deal_id: str, commitment_json: str, upstream_submission_id: str) -> None:
+        deal = self._load_deal(deal_id)
+        role = self._participant(deal)
+        _require(role in ("A", "B"), "WORKER_ONLY")
+        expected_status = "ACTIVE_A" if role == "A" else "ACTIVE_B"
+        _require(deal["status"] == expected_status, "WRONG_SUBMISSION_STAGE")
+        deadline = deal["a_deadline" if role == "A" else "b_deadline"]
+        _require(_now() < deadline, "SUBMISSION_WINDOW_CLOSED")
+        expected_upstream_role = "SOURCE" if role == "A" else "A"
+        _require(upstream_submission_id == deal["artifacts"][expected_upstream_role]["submission_id"], "UPSTREAM_MISMATCH")
+        commitment = _load(commitment_json, 4096)
+        _commitment(commitment, deal["manifest"]["terms"]["origins"][role])
+        submission = {"deal_id": deal_id, "role": role, "issuer": str(gl.message.sender_address), "revision": 0, "upstream_submission_id": upstream_submission_id, "commitment": commitment}
+        submission["submission_id"] = _digest(_json(submission).encode("utf-8"))
+        deal["artifacts"][role] = submission
+        if role == "A":
+            now = _now()
+            deal.update({"status": "ACTIVE_B", "b_deadline": now + deal["manifest"]["terms"]["windows"]["step"]})
+        else:
+            now = _now()
+            deal.update({"status": "REVIEWABLE", "review_deadline": now + deal["manifest"]["terms"]["windows"]["review"]})
+        self._save_deal(deal)
+
+    @gl.public.write
+    def request_review(self, deal_id: str) -> None:
+        deal = self._load_deal(deal_id)
+        self._participant(deal)
+        _require(deal["status"] == "REVIEWABLE" and _now() < deal["review_deadline"], "REVIEW_WINDOW_CLOSED")
+        now = _now()
+        commitments = {role: deal["artifacts"][role]["commitment"] for role in ROLES}
+        evidence_hash = _digest(_json(commitments).encode("utf-8"))
+        deal.update({"status": "REVIEW_REQUESTED", "review_requested_at": now, "adjudication_deadline": now + deal["manifest"]["terms"]["windows"]["adjudication"], "evidence_manifest_hash": evidence_hash})
+        self._save_deal(deal)
+
+    @gl.public.write
+    def resolve_review(self, deal_id: str) -> None:
+        deal = self._load_deal(deal_id)
+        self._participant(deal)
+        _require(deal["status"] == "REVIEW_REQUESTED" and _now() < deal["adjudication_deadline"], "ADJUDICATION_WINDOW_CLOSED")
+        commitments = {role: deal["artifacts"][role]["commitment"] for role in ROLES}
+        bundle = _review_consensus(deal["manifest"]["obligations"], commitments)
+        _object(bundle, ("artifacts", "semantic"), "REVIEW_BUNDLE_SCHEMA")
+        artifacts = _unwire_artifacts(bundle["artifacts"])
+        semantic = _wire_candidate(_candidate(_json(bundle["semantic"]), deal["manifest"]["obligations"], artifacts))
+        reviewed_at = _now()
+        identity = {"chain_domain": str(deal["chain_id"]), "contract": deal["contract"], "job_id": deal_id, "review_id": _digest((deal_id + ":0:" + deal["evidence_manifest_hash"]).encode("utf-8")), "revision": 0, "terms_hash": deal["terms_hash"], "evidence_manifest_hash": deal["evidence_manifest_hash"], "reviewed_at": str(reviewed_at)}
+        report = _assemble_report(identity, deal["manifest"]["obligations"], artifacts, semantic, _deterministic_assessments(deal["manifest"]["obligations"]), deal["manifest"]["terms"]["money"])
+        deal["report"] = report
+        deal["decision_hash"] = _digest(_json(report).encode("utf-8"))
+        if report["decision"]["next_state"] == "NEUTRAL_UNWIND_REQUIRED":
+            deal["status"] = "INCONCLUSIVE"
+        else:
+            deal["status"] = "SETTLEMENT_PENDING"
+            deal["settlement_legs"] = _settlement_legs(deal, report)
+        self._save_deal(deal)
+
+    @gl.public.write
+    def advance_timeout(self, deal_id: str) -> None:
+        deal = self._load_deal(deal_id)
+        status = deal["status"]
+        if status == "FUNDED":
+            _require(_now() >= deal["accept_deadline"], "DEADLINE_NOT_REACHED")
+            violated = ["SYS_ACCEPT_" + role for role in ("A", "B") if not deal["accepted"][role]]
+            report = _timeout_report(deal, "ACCEPTANCE_TIMEOUT", {"A": "UNASSESSABLE", "B": "UNASSESSABLE"}, violated)
+            for role in ("A", "B"):
+                if not deal["accepted"][role]:
+                    report["decision"]["stages"][role]["entitlements"]["BOND_RETURN"] = "0"
+            deal["report"] = report
+            deal["decision_hash"] = _digest(_json(report).encode("utf-8"))
+            deal["settlement_legs"] = _unactivated_legs(deal)
+        elif status == "ACTIVE_A":
+            _require(_now() >= deal["a_deadline"], "DEADLINE_NOT_REACHED")
+            report = _timeout_report(deal, "A_DELIVERY_TIMEOUT", {"A": "VIOLATED", "B": "UNASSESSABLE"}, ["SYS_DELIVERY_A"])
+            deal["report"] = report
+            deal["decision_hash"] = _digest(_json(report).encode("utf-8"))
+            deal["settlement_legs"] = _settlement_legs(deal, report)
+        elif status == "ACTIVE_B":
+            _require(_now() >= deal["b_deadline"], "DEADLINE_NOT_REACHED")
+            report = _timeout_report(deal, "B_DELIVERY_TIMEOUT", {"A": "UNASSESSABLE", "B": "VIOLATED"}, ["SYS_DELIVERY_B"])
+            deal["report"] = report
+            deal["decision_hash"] = _digest(_json(report).encode("utf-8"))
+            deal["settlement_legs"] = _settlement_legs(deal, report)
+        elif status == "REVIEWABLE":
+            _require(_now() >= deal["review_deadline"], "DEADLINE_NOT_REACHED")
+            report = _timeout_report(deal, "REVIEW_REQUEST_TIMEOUT", {"A": "UNASSESSABLE", "B": "UNASSESSABLE"}, [])
+            deal["report"] = report
+            deal["decision_hash"] = _digest(_json(report).encode("utf-8"))
+            deal["settlement_legs"] = _settlement_legs(deal, report)
+        elif status in ("REVIEW_REQUESTED", "INCONCLUSIVE"):
+            _require(_now() >= deal["adjudication_deadline"], "DEADLINE_NOT_REACHED")
+            report = deal.get("report") or _timeout_report(deal, "ADJUDICATION_TIMEOUT", {"A": "UNASSESSABLE", "B": "UNASSESSABLE"}, [])
+            # Any inconclusive semantic result resolves only through the frozen
+            # neutral unwind formulas when the adjudication window expires.
+            if report["decision"]["next_state"] == "NEUTRAL_UNWIND_REQUIRED":
+                report["decision"]["next_state"] = "READY_FOR_SETTLEMENT"
+            deal["report"] = report
+            deal["decision_hash"] = _digest(_json(report).encode("utf-8"))
+            deal["settlement_legs"] = _settlement_legs(deal, report)
+        else:
+            raise gl.vm.UserError("NO_TIMEOUT_TRANSITION")
+        deal["status"] = "SETTLEMENT_PENDING"
+        deal["timed_out_at"] = _now()
+        self._save_deal(deal)
+
+    @gl.public.write
+    def route_settlement(self, deal_id: str, leg_id: str) -> None:
+        deal = self._load_deal(deal_id)
+        _require(deal["status"] == "SETTLEMENT_PENDING", "SETTLEMENT_NOT_READY")
+        matches = [leg for leg in deal["settlement_legs"] if leg["id"] == leg_id]
+        _require(len(matches) == 1 and matches[0]["state"] == "ELIGIBLE", "LEG_NOT_ELIGIBLE")
+        leg = matches[0]
+        expected = _receipt_expected(deal, leg, "FUNDED")
+        _evm_send_exact(Address(self.router), _router_fund_calldata(expected), int(leg["amount"]))
+        leg["state"] = "ROUTED"
+        leg["routed_at"] = _now()
+        deal["ledger"]["routed"] = str(int(deal["ledger"]["routed"]) + int(leg["amount"]))
+        _require(int(deal["ledger"]["routed"]) <= int(deal["ledger"]["received"]), "ROUTING_CONSERVATION")
+        self._save_deal(deal)
+
+    @gl.public.write
+    def confirm_settlement(self, deal_id: str, leg_id: str) -> None:
+        deal = self._load_deal(deal_id)
+        matches = [leg for leg in deal["settlement_legs"] if leg["id"] == leg_id]
+        _require(len(matches) == 1 and matches[0]["state"] == "ROUTED", "LEG_NOT_ROUTED")
+        leg = matches[0]
+        expected = _receipt_expected(deal, leg, "RELEASED")
+        _require(_router_receipt_digest(Address(self.router), leg["receipt_id"]) == _receipt_digest(expected), "RECEIPT_MISMATCH")
+        _receipt_matches(expected, expected)
+        leg["state"] = "CONFIRMED"
+        leg["confirmed_at"] = _now()
+        deal["ledger"]["confirmed"] = str(int(deal["ledger"]["confirmed"]) + int(leg["amount"]))
+        if all(item["state"] == "CONFIRMED" for item in deal["settlement_legs"]):
+            _require(deal["ledger"]["confirmed"] == deal["ledger"]["received"], "CONFIRMATION_CONSERVATION")
+            deal["status"] = "COMPLETED"
+            deal["completed_at"] = _now()
+        self._save_deal(deal)
 
     @gl.public.view
     def get_terms(self, deal_id: str) -> str:
-        _require(deal_id in self.drafts, "DEAL_NOT_FOUND")
-        return self.drafts[deal_id]
+        return _json(self._load_deal(deal_id))
+
+    @gl.public.view
+    def list_deals(self, offset: u256, limit: u256) -> str:
+        _require(limit <= 50, "LIST_LIMIT")
+        end = min(int(offset + limit), len(self.order))
+        return _json({"total": len(self.order), "ids": [self.order[index] for index in range(min(int(offset), end), end)]})

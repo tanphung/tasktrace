@@ -6,15 +6,17 @@ import sys
 import os
 import tempfile
 import base64
+from types import SimpleNamespace
+from datetime import datetime, timezone
 
 import pytest
 
 
 @pytest.fixture
-def core(direct_vm, direct_deploy, direct_alice):
+def core(direct_vm, direct_deploy, direct_alice, direct_owner):
     direct_vm.sender = direct_alice
-    contract = direct_deploy("contracts/tasktrace_v2_core.py", sdk_version="v0.2.12")
-    return contract, sys.modules["_contract_tasktrace_v2_core"], direct_vm
+    contract = direct_deploy("contracts/tasktrace_v2.py", "0x" + direct_owner.hex(), sdk_version="v0.2.12")
+    return contract, sys.modules["_contract_tasktrace_v2"], direct_vm
 
 
 def origin():
@@ -54,7 +56,141 @@ def test_persist_exact_immutable_obligations(core):
     with pytest.raises(m.gl.vm.UserError, match="DEAL_EXISTS"):
         c.create_terms("work-1", json.dumps(terms()))
     assert c.get_terms("work-1") == before
-    assert json.loads(c.get_capabilities())["funding"] is False
+    capabilities = json.loads(c.get_capabilities())
+    assert capabilities["funding"] is True and capabilities["external_review"] is True and capabilities["settlement"] is True
+
+
+def test_public_lifecycle_keeps_review_and_receipt_authority_in_contract(core, monkeypatch):
+    c, m, vm = core
+    vm.warp("2026-09-12T00:00:00+00:00")
+    m.gl.message_raw["datetime"] = "2026-09-12T00:00:00+00:00"
+    client = str(m.gl.message.sender_address)
+    c.create_terms("work-1", json.dumps(terms()))
+    deal = json.loads(c.get_terms("work-1"))
+
+    vm.value = 20
+    c.fund_terms("work-1", deal["terms_hash"])
+    vm.value = 0
+    for worker in ("0x" + "22" * 20, "0x" + "33" * 20):
+        vm.sender = m.Address(worker).as_bytes
+        vm.value = 5
+        c.accept_work("work-1", deal["terms_hash"])
+        vm.value = 0
+
+    deal = json.loads(c.get_terms("work-1"))
+    vm.sender = m.Address("0x" + "22" * 20).as_bytes
+    c.submit_artifact("work-1", json.dumps(artifact()), deal["artifacts"]["SOURCE"]["submission_id"])
+    deal = json.loads(c.get_terms("work-1"))
+    vm.sender = m.Address("0x" + "33" * 20).as_bytes
+    c.submit_artifact("work-1", json.dumps(artifact()), deal["artifacts"]["A"]["submission_id"])
+    vm.sender = bytes.fromhex(client[2:])
+    c.request_review("work-1")
+
+    deal = json.loads(c.get_terms("work-1"))
+    commitments = {role: deal["artifacts"][role]["commitment"] for role in m.ROLES}
+    artifacts = {role: {"commitment": commitments[role], "bytes": b"Approval is required."} for role in m.ROLES}
+    for item in artifacts.values():
+        commitment = item["commitment"]
+        item["provenance"] = {"adapter": "github-commit-v1", "provider": commitment["origin"]["provider"], "hostname": commitment["origin"]["hostname"], "owner": commitment["origin"]["owner"], "owner_id": commitment["origin"]["owner_id"], "repository": commitment["origin"]["repository"], "repository_id": commitment["origin"]["repository_id"], "commit": commitment["commit"], "blob": commitment["blob"], "path": commitment["path"], "content_type": commitment["content_type"], "byte_length": commitment["byte_length"], "sha256": commitment["sha256"], "status": "VERIFIED"}
+    obligations = deal["manifest"]["obligations"]
+    _, _, semantic = candidate(m)
+    monkeypatch.setattr(m, "_review_consensus", lambda actual_obligations, actual_commitments: {"artifacts": m._wire_artifacts(artifacts), "semantic": semantic})
+    c.resolve_review("work-1")
+    deal = json.loads(c.get_terms("work-1"))
+    assert deal["status"] == "SETTLEMENT_PENDING"
+    assert len(deal["report"]["obligation_assessments"]) == len(obligations)
+    assert sum(int(leg["amount"]) for leg in deal["settlement_legs"]) == int(deal["ledger"]["received"]) == 30
+
+    sends = []
+    monkeypatch.setattr(m, "_evm_send_exact", lambda router, calldata, amount: sends.append((str(router), calldata, amount)))
+    for original in list(deal["settlement_legs"]):
+        c.route_settlement("work-1", original["id"])
+        with pytest.raises(m.gl.vm.UserError, match="LEG_NOT_ELIGIBLE"):
+            c.route_settlement("work-1", original["id"])
+        routed = json.loads(c.get_terms("work-1"))
+        leg = next(item for item in routed["settlement_legs"] if item["id"] == original["id"])
+        expected = m._receipt_expected(routed, leg, "RELEASED")
+        if original["sequence"] == 0:
+            monkeypatch.setattr(m, "_router_receipt_digest", lambda router, receipt_id: "00" * 32)
+            with pytest.raises(m.gl.vm.UserError, match="RECEIPT_MISMATCH"):
+                c.confirm_settlement("work-1", original["id"])
+            unchanged = next(item for item in json.loads(c.get_terms("work-1"))["settlement_legs"] if item["id"] == original["id"])
+            assert unchanged["state"] == "ROUTED"
+        monkeypatch.setattr(m, "_router_receipt_digest", lambda router, receipt_id, value=m._receipt_digest(expected): value)
+        c.confirm_settlement("work-1", original["id"])
+        with pytest.raises(m.gl.vm.UserError, match="LEG_NOT_ROUTED"):
+            c.confirm_settlement("work-1", original["id"])
+    completed = json.loads(c.get_terms("work-1"))
+    assert completed["status"] == "COMPLETED"
+    assert completed["ledger"] == {"received": "30", "routed": "30", "confirmed": "30"}
+    assert len(sends) == len(completed["settlement_legs"])
+
+
+def test_funding_and_acceptance_require_exact_value_and_role(core):
+    c, m, vm = core
+    c.create_terms("work-1", json.dumps(terms()))
+    deal = json.loads(c.get_terms("work-1"))
+    vm.value = 19
+    with pytest.raises(m.gl.vm.UserError, match="EXACT_FEE_FUNDING"):
+        c.fund_terms("work-1", deal["terms_hash"])
+    vm.value = 20
+    c.fund_terms("work-1", deal["terms_hash"])
+    vm.value = 0
+    with pytest.raises(m.gl.vm.UserError, match="WORKER_ONLY"):
+        c.accept_work("work-1", deal["terms_hash"])
+
+
+def test_acceptance_timeout_refunds_only_value_actually_funded(core):
+    c, m, vm = core
+    vm.warp("2026-09-12T00:00:00+00:00")
+    m.gl.message_raw["datetime"] = "2026-09-12T00:00:00+00:00"
+    c.create_terms("work-1", json.dumps(terms()))
+    deal = json.loads(c.get_terms("work-1"))
+    vm.value = 20
+    c.fund_terms("work-1", deal["terms_hash"])
+    vm.sender = m.Address("0x" + "22" * 20).as_bytes
+    vm.value = 5
+    c.accept_work("work-1", deal["terms_hash"])
+    vm.value = 0
+    with pytest.raises(m.gl.vm.UserError, match="DEADLINE_NOT_REACHED"):
+        c.advance_timeout("work-1")
+    deadline = json.loads(c.get_terms("work-1"))["accept_deadline"]
+    iso = datetime.fromtimestamp(deadline, timezone.utc).isoformat()
+    vm.warp(iso)
+    m.gl.message_raw["datetime"] = iso
+    c.advance_timeout("work-1")
+    timed_out = json.loads(c.get_terms("work-1"))
+    assert timed_out["status"] == "SETTLEMENT_PENDING"
+    assert timed_out["ledger"]["received"] == "25"
+    assert sum(int(leg["amount"]) for leg in timed_out["settlement_legs"]) == 25
+    assert {leg["kind"] for leg in timed_out["settlement_legs"]} == {"REFUND", "BOND_RETURN"}
+    assert timed_out["report"]["decision"]["stages"]["B"]["entitlements"]["BOND_RETURN"] == "0"
+    assert len(timed_out["report"]["obligation_assessments"]) == len(timed_out["manifest"]["obligations"])
+
+
+def test_delivery_timeout_is_contract_determined_and_conserves_funds(core):
+    c, m, vm = core
+    vm.warp("2026-09-12T00:00:00+00:00")
+    m.gl.message_raw["datetime"] = "2026-09-12T00:00:00+00:00"
+    c.create_terms("work-1", json.dumps(terms()))
+    deal = json.loads(c.get_terms("work-1"))
+    vm.value = 20
+    c.fund_terms("work-1", deal["terms_hash"])
+    for worker in ("0x" + "22" * 20, "0x" + "33" * 20):
+        vm.sender = m.Address(worker).as_bytes
+        vm.value = 5
+        c.accept_work("work-1", deal["terms_hash"])
+    vm.value = 0
+    active = json.loads(c.get_terms("work-1"))
+    iso = datetime.fromtimestamp(active["a_deadline"], timezone.utc).isoformat()
+    vm.warp(iso)
+    m.gl.message_raw["datetime"] = iso
+    c.advance_timeout("work-1")
+    timed_out = json.loads(c.get_terms("work-1"))
+    assert timed_out["report"]["decision"]["stages"]["A"]["outcome"] == "VIOLATED"
+    assert timed_out["report"]["decision"]["stages"]["B"]["outcome"] == "UNASSESSABLE"
+    assert sum(int(leg["amount"]) for leg in timed_out["settlement_legs"]) == 30
+    assert any(row["obligation_id"] == "SYS_DELIVERY_A" and row["status"] == "VIOLATED" for row in timed_out["report"]["obligation_assessments"])
 
 
 @pytest.mark.parametrize("revision", [1, -1, True, "0"])
@@ -214,6 +350,7 @@ def test_ic_derives_violation_and_neutral_unwind_without_llm_money(core):
     for row in semantic["assessments"]:
         if row["status"] == "UNASSESSABLE":
             row["missing_evidence_ids"] = ["A"]
+            row["citations"] = [citation for citation in row["citations"] if citation["artifact_id"] != "A"]
     report = m._assemble_report(identity, obligations, artifacts, semantic, deterministic, terms()["money"])
     assert report["score"] == {"A": 0, "B": None}
     assert report["decision"]["next_state"] == "NEUTRAL_UNWIND_REQUIRED"
@@ -275,6 +412,15 @@ def test_exact_receipt_identity(core, field, value):
     assert m._receipt_matches(expected, expected)
     with pytest.raises(m.gl.vm.UserError):
         m._receipt_matches(expected, actual)
+
+
+def test_receipt_digest_and_router_abi_match_solidity_reference(core):
+    _, m, _ = core
+    expected = receipt(m)
+    assert m._receipt_digest(expected) == "a594b2c908eb708fdc03f773c04ce85dd2bdec9c6e2598de822d53dc5da18850"
+    assert m._router_fund_calldata({**expected, "state": "FUNDED"})[:4].hex() == "6e4e63e1"
+    encoder = m.gl.evm.MethodEncoder("receiptDigest", (m.gl.evm.bytes32,), m.gl.evm.bytes32)
+    assert encoder.encode_call((bytes.fromhex(expected["receipt_id"]),))[:4].hex() == "f74c8cac"
 
 
 @pytest.mark.parametrize("outcome,expected", [("SATISFIED", (10, 0, 5)), ("VIOLATED", (0, 13, 2)), ("UNASSESSABLE", (0, 10, 5))])
@@ -434,11 +580,24 @@ def test_candidate_rejects_ambiguous_repeated_quote(core):
         m._candidate(json.dumps(response), obligations, artifacts)
 
 
+def test_unassessable_candidate_can_name_all_missing_evidence_without_fake_citations(core):
+    _, m, _ = core
+    obligations, artifacts, response = candidate(m)
+    first = response["assessments"][0]
+    duty = next(row for row in obligations if row["id"] == first["obligation_id"])
+    first.update(status="UNASSESSABLE", reason="Required evidence is unavailable.", citations=[], missing_evidence_ids=duty["evidence_ids"])
+    normalized = m._candidate(json.dumps(response), obligations, artifacts)
+    assert normalized["assessments"][0]["missing_evidence_ids"] == sorted(duty["evidence_ids"])
+
+
 def test_sdk_nondet_receives_both_callbacks_without_backend_authority(core, monkeypatch):
     _, m, _ = core
     obligations, artifacts, response = candidate(m)
+    for item in artifacts.values():
+        commitment = item["commitment"]
+        item["provenance"] = {"adapter": "github-commit-v1", "provider": commitment["origin"]["provider"], "hostname": commitment["origin"]["hostname"], "owner": commitment["origin"]["owner"], "owner_id": commitment["origin"]["owner_id"], "repository": commitment["origin"]["repository"], "repository_id": commitment["origin"]["repository_id"], "commit": commitment["commit"], "blob": commitment["blob"], "path": commitment["path"], "content_type": commitment["content_type"], "byte_length": commitment["byte_length"], "sha256": commitment["sha256"], "status": "VERIFIED"}
     fetched = []
-    def acquire():
+    def acquire(_commitments):
         fetched.append(1)
         return artifacts
     def prompt(text, **kwargs):
@@ -448,8 +607,11 @@ def test_sdk_nondet_receives_both_callbacks_without_backend_authority(core, monk
         assert validator(m.gl.vm.Return(value))
         return value
     monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
+    monkeypatch.setattr(m, "_acquire_all", acquire)
     monkeypatch.setattr(m.gl.vm, "run_nondet_unsafe", exercise_callbacks)
-    assert m._review_consensus(obligations, acquire) == response
+    result = m._review_consensus(obligations, {role: artifacts[role]["commitment"] for role in m.ROLES})
+    assert result["semantic"] == response
+    assert set(result["artifacts"]) == set(m.ROLES)
     assert len(fetched) == 2
 
 
@@ -563,3 +725,46 @@ def test_http_envelope_rejects_ambiguous_or_truncated_content(core, headers, bod
 def test_http_envelope_preserves_complete_json(core):
     _, m, _ = core
     assert m._provider_json(200, {"Content-Type": b"application/json; charset=utf-8"}, b'{"first":1,"last":"exception"}') == {"first": 1, "last": "exception"}
+
+
+def test_github_acquisition_constructs_canonical_urls_and_caches_identical_objects(core, monkeypatch):
+    _, m, _ = core
+    commitment, repo, commit, trees, blob = github_bundle()
+    base = "https://api.github.com/repos/example/policy"
+    payloads = {
+        base: repo,
+        base + "/git/commits/" + commitment["commit"]: commit,
+        base + "/git/trees/" + trees[0]["sha"]: trees[0],
+        base + "/git/trees/" + trees[1]["sha"]: trees[1],
+        base + "/git/blobs/" + commitment["blob"]: blob,
+    }
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs))
+        body = json.dumps(payloads[url], separators=(",", ":")).encode()
+        return SimpleNamespace(status=200, headers={"content-type": b"application/vnd.github+json; charset=utf-8"}, body=body)
+
+    monkeypatch.setattr(m.gl.nondet.web, "get", get)
+    acquired = m._acquire_all({role: copy.deepcopy(commitment) for role in m.ROLES})
+    assert len(calls) == len(payloads)
+    assert set(url for url, _ in calls) == set(payloads)
+    assert all(url.startswith(base) and "?" not in url and "#" not in url for url, _ in calls)
+    assert all(call[1]["headers"]["Accept"] == "application/vnd.github+json" for call in calls)
+    assert all(acquired[role]["bytes"].endswith(b"trials require no approval.") for role in m.ROLES)
+    assert all(acquired[role]["provenance"]["status"] == "VERIFIED" for role in m.ROLES)
+
+
+def test_github_acquisition_rejects_surfaced_cross_domain_redirect_before_body_use(core, monkeypatch):
+    _, m, _ = core
+    commitment, *_ = github_bundle()
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append(url)
+        return SimpleNamespace(status=302, headers={"location": b"https://evil.example/forged.json", "content-type": b"application/json"}, body=b'{"forged":true}')
+
+    monkeypatch.setattr(m.gl.nondet.web, "get", get)
+    with pytest.raises(m.gl.vm.UserError, match="HTTP_REDIRECT"):
+        m._acquire_github(commitment, {})
+    assert calls == ["https://api.github.com/repos/example/policy"]
