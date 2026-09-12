@@ -313,6 +313,96 @@ def test_validator_independently_acquires_and_sees_complete_tail(core, monkeypat
     assert "proposed" not in prompts[1]
 
 
+def test_semantic_prompt_retries_only_malformed_output_with_same_full_evidence(core, monkeypatch):
+    _, m, _ = core
+    raw = b"Opening rule: approval required.\nFinal exception: trials need no approval."
+    obligations, artifacts, response = candidate(m, raw)
+    prompts = []
+
+    def prompt(text, **kwargs):
+        prompts.append(text)
+        return {} if len(prompts) == 1 else copy.deepcopy(response)
+
+    monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
+    result = m._derive_semantics(obligations, artifacts)
+    assert result["assessments"][0]["status"] == "SATISFIED"
+    assert len(prompts) == 2
+    assert all("Final exception: trials need no approval." in text for text in prompts)
+    assert "FORMAT_RETRY:" not in prompts[0] and "FORMAT_RETRY:" in prompts[1]
+
+    skeleton = json.loads(prompts[0].split("OUTPUT_SKELETON_JSON\n", 1)[1].split("\nBEGIN_UNTRUSTED_INPUT_JSON", 1)[0])
+    assert skeleton["reviewed_artifacts"] == response["reviewed_artifacts"]
+    assert [row["obligation_id"] for row in skeleton["assessments"]] == [
+        row["id"] for row in obligations if row["kind"] == "SEMANTIC"
+    ]
+    assert all(row["status"] == "CHOOSE_STATUS" for row in skeleton["assessments"])
+    assert all({citation["artifact_id"] for citation in row["citations"]} == set(obligation["evidence_ids"])
+               for row, obligation in zip(skeleton["assessments"], [r for r in obligations if r["kind"] == "SEMANTIC"]))
+
+
+def test_semantic_prompt_never_rerolls_valid_first_result(core, monkeypatch):
+    _, m, _ = core
+    obligations, artifacts, response = candidate(m)
+    calls = []
+
+    def prompt(text, **kwargs):
+        calls.append(text)
+        return copy.deepcopy(response)
+
+    monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
+    assert m._derive_semantics(obligations, artifacts)["assessments"][0]["status"] == "SATISFIED"
+    assert len(calls) == 1
+
+
+def test_semantic_prompt_fails_closed_after_one_format_retry(core, monkeypatch):
+    _, m, _ = core
+    obligations, artifacts, _ = candidate(m)
+    calls = []
+
+    def prompt(text, **kwargs):
+        calls.append(text)
+        return {}
+
+    monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
+    with pytest.raises(m.gl.vm.UserError, match="CANDIDATE_SCHEMA"):
+        m._derive_semantics(obligations, artifacts)
+    assert len(calls) == 2
+
+
+def test_validator_retries_only_malformed_grounding_schema(core, monkeypatch):
+    _, m, _ = core
+    obligations, artifacts, response = candidate(m)
+    grounding_calls = []
+
+    def prompt(text, **kwargs):
+        if "TASKTRACE_V2_GROUNDING" not in text:
+            return copy.deepcopy(response)
+        grounding_calls.append(text)
+        return {} if len(grounding_calls) == 1 else {"supported": True}
+
+    monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
+    assert m._validate_semantic_leader(obligations, lambda: artifacts, m.gl.vm.Return(response))
+    assert len(grounding_calls) == 2
+    assert "FORMAT_RETRY:" not in grounding_calls[0] and "FORMAT_RETRY:" in grounding_calls[1]
+    assert all("Approval is required." in text for text in grounding_calls)
+
+
+def test_validator_never_rerolls_valid_grounding_rejection(core, monkeypatch):
+    _, m, _ = core
+    obligations, artifacts, response = candidate(m)
+    grounding_calls = []
+
+    def prompt(text, **kwargs):
+        if "TASKTRACE_V2_GROUNDING" not in text:
+            return copy.deepcopy(response)
+        grounding_calls.append(text)
+        return {"supported": False}
+
+    monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
+    assert not m._validate_semantic_leader(obligations, lambda: artifacts, m.gl.vm.Return(response))
+    assert len(grounding_calls) == 1
+
+
 @pytest.mark.parametrize("mode", ["outcome", "grounding", "evidence_changed", "malformed", "grounding_truthy"])
 def test_validator_rejects_substantive_or_structural_disagreement(core, monkeypatch, mode):
     c, m, _ = core
