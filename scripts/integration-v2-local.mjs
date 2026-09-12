@@ -143,6 +143,24 @@ const [deployer] = await rpc(evmEndpoint, "eth_accounts");
 assert.ok(deployer, "Local EVM exposes no unlocked deployment account");
 const evmDeployer = createWalletClient({ account: deployer, chain: evmChain, transport: http(evmEndpoint) });
 
+for (const role of ["client", "A", "B"]) {
+  if (await evmPublic.getBalance({ address: accounts[role].address }) >= 10n ** 15n) continue;
+  const name = `evm-fund-${role}`;
+  let item = manifest.steps[name];
+  if (!item) {
+    item = manifest.steps[name] = { phase: "SIGNING", startedAt: new Date().toISOString() };
+    await save();
+    const hash = await evmDeployer.sendTransaction({ to: accounts[role].address, value: 10n ** 17n });
+    Object.assign(item, { hash, phase: "PENDING", submittedAt: new Date().toISOString() });
+    await save();
+  }
+  assert.ok(item.hash, `Uncertain ${name} has no saved hash; do not resend`);
+  const receipt = await evmPublic.waitForTransactionReceipt({ hash: item.hash });
+  assert.equal(receipt.status, "success", `${name} reverted`);
+  Object.assign(item, { finalized: true, phase: "FINALIZED_SUCCESS", finishedAt: new Date().toISOString() });
+  await save();
+}
+
 const buildResult = await solidity.build([
   fileURLToPath(new URL("../contracts/TaskTraceReceiptRouter.sol", import.meta.url)),
 ], { force: true, quiet: true, cleanupArtifacts: true });
