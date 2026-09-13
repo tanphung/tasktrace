@@ -23,7 +23,7 @@ records the IC-selected transfer; it cannot choose a verdict or recipient.
 
 Current gates: GenVM lint passes; 252 Python direct/adversarial regression tests
 pass (157 in the v2 contract suite); 80 React tests plus two receipt tests,
-10 hosted-worker tests, TypeScript, Cloudflare Worker dry-run, the production
+15 hosted-worker tests, TypeScript, Cloudflare Worker dry-run, the production
 bundle and dependency audit pass; and 20 EVM router cases pass. The current
 source is also deployed to gasless StudioNet for semantic-only verification at
 `0x21f3D8DBB47DFb7dd031a7bC453614513c86DFfF`. Both full lifecycle
@@ -41,6 +41,10 @@ immutable GitHub publication, B-after-finalized-A enforcement, wallet-bound
 authorization and an integer hard cap of 0.80 USD for build/test OpenAI usage.
 It can only accept and submit worker artifacts; it cannot request adjudication,
 select a verdict or settle funds. Remote worker deployment remains release-locked.
+The live OpenAI A/B smoke passed with structured outputs on `gpt-5.6-luna`:
+both stages preserved the complete final provenance exception, costing
+0.0001722 USD in total. The earlier failed authentication ID remains separately
+reserved under the conservative no-automatic-retry policy.
 
 ## The idea
 
