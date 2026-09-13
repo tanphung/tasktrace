@@ -1,11 +1,13 @@
-# V2 release-candidate checkpoint — 12 September 2026
+# V2 release-candidate checkpoint — 13 September 2026
 
 Current source is `contracts/tasktrace_v2.py`, not the former draft-only
 `tasktrace_v2_core.py`. The IC now exposes the complete funded lifecycle,
 independently acquires all committed GitHub bytes in leader and validator runs,
 stores the full structured report, applies deterministic deadline/settlement
 rules and confirms only an exact released router receipt. The production v1.1
-deployment remains unchanged and v2 is not deployed.
+deployment remains unchanged. V2 has not been released to Bradbury or selected
+by the public frontend; a semantic-only copy is deployed to gasless StudioNet
+for committee verification.
 
 The minimal Solidity router is `contracts/TaskTraceReceiptRouter.sol`; adversarial
 recipient contracts live only under `tests/evm/`. Latest component gates are:
@@ -14,12 +16,47 @@ recipient contracts live only under `tests/evm/`. Latest component gates are:
 - V2 direct suite: 157 passed; full Python regression: 252 passed.
 - Router: 16 EVM cases pass, including wrong recipient, duplicate receipt,
   recipient revert and reentrancy.
-- Frontend/receipt regression: 67 passed; TypeScript/Vite build passes.
+- Frontend 74/74 plus receipt 2/2, TypeScript/Vite production build and
+  dependency audit pass; largest built chunk is 285.22 kB before gzip.
 
-Native local GenVM/committee integration, real router round-trip and the v2 UI
-deployment profile are still release gates. The 11 September text below is kept
-as historical evidence of how the implementation evolved; its “disabled” and
-“unimplemented” statements no longer describe the current source.
+## Real StudioNet committee gate
+
+- Chain `61999`; contract `0x41BcdFB280BD26939cb6956B55ddA7e85b4567c9`.
+- Deploy transaction `0xea5700856225a70267eb8d4dce92e0b9c1ddb2223d35685a4e971b449a4f2cef`
+  finalized with successful execution. Deployed schema has 3 views and 9 writes;
+  `get_capabilities` returns `tasktrace-2.0-rc` and the deliberately disabled
+  router address.
+- Exact source SHA-256 is
+  `3133e10bf159d16a9fa49a1ec93f70cd02d1396e6f37983ed75534c5b2c3768e`.
+  All artifacts are public immutable blobs at commit
+  `f4b48b235d15c0be61cbd75bf491dde1b98ad058`.
+- Happy case: A/B `SATISFIED`. Tail-contradiction case: A `VIOLATED`, B
+  `SATISFIED`. Both traverse create, fund, accept A/B, submit A/B, request review
+  and resolve review; 17/17 positive steps, including deploy, are
+  `FINALIZED_SUCCESS`.
+- Five additional committee transactions are
+  `FINALIZED_EXPECTED_REJECTION`: canonical-host confusion, wrong committed
+  owner, mutable commit name, malformed artifact SHA-256 and incomplete semantic
+  obligation set. Each has `FINISHED_WITH_ERROR`, the expected contract error and
+  no persisted deal.
+- One preliminary owner probe correctly rejected `ORIGIN_HOST` instead of the
+  intended owner check because the test runner shared a mutated origin object.
+  It is retained as `FINALIZED_HARNESS_REJECTION`; the isolated replacement
+  passed. Failures were not deleted or rewritten as successes.
+- The 27 report JSON files are sanitized; signing keys remain only in ignored
+  `.secrets/v2-studionet-semantic.json`.
+
+The remaining native release gate is the exact IC → EVM router → recipient → IC
+receipt-confirmation round trip. StudioNet was intentionally deployed with a dead
+router and cannot establish this claim. The Solidity router suite and pinned
+GenVM host-protocol adapter pass as component tests, but Bradbury execution still
+requires fresh user approval. The official pinned web response also cannot expose
+already-followed redirect history; surfaced 3xx and every noncanonical origin are
+rejected, while hidden redirects remain an explicitly disclosed SDK limitation.
+
+The 11 September text below is kept as historical evidence of how the
+implementation evolved; its “disabled” and “unimplemented” statements no longer
+describe the current source.
 
 ## Historical 11 September core checkpoint
 

@@ -1,4 +1,4 @@
-# Mốc tiếp tục TaskTrace — cập nhật 12/09/2026
+# Mốc tiếp tục TaskTrace — cập nhật 13/09/2026
 
 ## Trạng thái hiện hành — v2 release candidate, chưa deploy
 
@@ -7,14 +7,25 @@ Source hiện tại là `contracts/tasktrace_v2.py` và
 thay thế. IC đã có trọn lifecycle funding → accept → immutable GitHub commitment
 → independent consensus review → structured report → deterministic settlement
 → exact released-receipt confirmation. Lint đạt; v2 direct 157/157, toàn bộ Python
-252/252, frontend/receipt 67/67 và router EVM 16/16. Production vẫn cố ý giữ v1.1;
+252/252, frontend 74/74 + receipt 2/2 và router EVM 16/16. Production vẫn cố ý giữ v1.1;
 v2 chưa deploy, chưa được chọn trong frontend.
 
-Đang hoàn tất native Localnet/committee integration và profile UI v2. GenLayer
-CLI 0.39.2 cần Localnet image `v0.65.0`; dùng image `latest` gây sai lệch compose
-(DB/Redis) và không phải lỗi TaskTrace. Không reset/xóa database local của người
-dùng. Sau khi full integration và toàn bộ release gate đạt, phải xin xác nhận mới
-trước deploy Bradbury như `AGENTS.md`.
+Đã hoàn tất semantic committee integration thật trên StudioNet bằng contract V2
+`0x41BcdFB280BD26939cb6956B55ddA7e85b4567c9`: deploy + hai lifecycle đầy đủ có
+17/17 step thành công; happy cho A/B `SATISFIED`, artifact mâu thuẫn ở cuối cho A
+`VIOLATED`, B `SATISFIED`. Năm giao dịch âm khác đều finalized với execution lỗi
+đúng mã và không lưu deal: hostname, owner, commit, SHA-256 và obligation set.
+Manifest/receipt đã sanitize ở `reports/v2-studionet-semantic/`; ví StudioNet chỉ
+ở `.secrets/` bị ignore. Một probe ban đầu sai cô lập object được giữ nguyên làm
+bằng chứng harness failure rồi thay bằng probe đúng.
+
+StudioNet cố ý dùng router dead address nên không tuyên bố settlement. Gate còn
+lại là round trip IC → router EVM → recipient → exact released receipt → IC trên
+Bradbury, cùng lựa chọn V2 cho public frontend. Không deploy Bradbury/Vercel trước
+khi toàn bộ gate offline hiện tại được chạy lại và người dùng xác nhận mới theo
+`AGENTS.md`. Hidden redirect đã-follow vẫn không quan sát được trong SDK pinned;
+contract từ chối 3xx lộ ra và mọi origin không canonical, nhưng không được tuyên
+bố đã giải quyết hạn chế SDK này.
 
 Các mốc 10–11/09 bên dưới là lịch sử và bị phần hiện hành này thay thế nếu mâu
 thuẫn.

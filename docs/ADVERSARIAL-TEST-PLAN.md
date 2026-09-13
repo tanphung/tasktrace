@@ -6,14 +6,19 @@
 
 Tests must demonstrate independent leader/validator acquisition and substantive rejection. Ordinary direct tests with a mocked LLM cannot establish real committee behavior. Studio does not fully implement EVM contract interaction; local router tests and mocked IC reads must not be represented as a passed native end-to-end integration. Missing full-path environment is an explicit open gate. No deployment until required contract tests pass and the user confirms.
 
-Current component evidence: 144 v2 direct tests pass, including whole-tail,
-identity, report completeness, provenance-report binding, stage-specific
-deterministic duties and exact receipt negatives. A real pinned GenVM controlled
-host probe passes exact EVM target/value encoding. A second real GenVM probe with
-the unmodified official local web module confirms cross-host redirects are
-followed and hidden from the contract response; this is a passed diagnostic but
-a **failed production capability gate**. Real committee/LLM, router execution,
-finality and funded lifecycle cases below remain open.
+Current evidence: 157 v2 direct tests pass, including whole-tail, identity,
+report completeness, provenance-report binding, stage-specific deterministic
+duties and exact receipt negatives. On StudioNet, two complete funded lifecycle
+cases passed real protocol committee review: faithful A/B and a contradictory
+tail that produces A `VIOLATED`, B `SATISFIED`. Five finalized negative writes
+prove on GenVM that canonical-host confusion, wrong owner, mutable version,
+malformed SHA-256 and an incomplete obligation set are rejected without state.
+The real pinned GenVM controlled-host probe passes exact EVM target/value
+encoding, and the 16-case router suite covers receipt identity and release
+failures. The unmodified official local web module confirms cross-host redirects
+are followed and hidden from the contract response; this is a passed diagnostic
+but a **failed hidden-redirect capability gate**. Native IC/router execution and
+receipt finality remain open until an authorized Bradbury round trip.
 
 ## Addendum v0.4 — preserve ambiguous historical case
 

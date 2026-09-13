@@ -8,6 +8,7 @@
     "release:bradbury": "node scripts/bradbury-release.mjs",
     "test:integration": "node scripts/integration.mjs",
     "test:v2:local": "node scripts/integration-v2-local.mjs",
+    "test:v2:studionet": "node scripts/integration-v2-studionet.mjs",
     "test:router": "node scripts/test-receipt-router.mjs",
     "test:live-wallet": "vitest run --config vitest.live.config.ts --reporter=verbose",
     "test:types": "tsc -p tsconfig.tests.json",

@@ -41,6 +41,11 @@ const evidencePaths = {
 const exists = (path) => access(path).then(() => true, () => false);
 const stringify = (value) => JSON.stringify(value, (_, item) => typeof item === "bigint" ? item.toString() : item, 2);
 const save = () => writeFile(manifestPath, stringify(manifest));
+const githubHeaders = {
+  accept: "application/vnd.github+json",
+  "user-agent": "TaskTrace-v2-integration",
+  ...(process.env.GH_TOKEN ? { authorization: `Bearer ${process.env.GH_TOKEN}` } : {}),
+};
 
 async function rpc(url, method, params = []) {
   const response = await fetch(url, {
@@ -98,10 +103,21 @@ async function waitGen(hash, requireContractExecution = true) {
 
 async function genStep(name, actor, submit, requireContractExecution = true) {
   let item = manifest.steps[name];
-  if (!item) {
+  if (!item || item.phase === "REJECTED_BEFORE_HASH") {
     item = manifest.steps[name] = { phase: "SIGNING", startedAt: new Date().toISOString() };
     await save();
-    const hash = await submit();
+    let hash;
+    try {
+      hash = await submit();
+    } catch (error) {
+      Object.assign(item, {
+        phase: "REJECTED_BEFORE_HASH",
+        error: error?.details ?? error?.shortMessage ?? error?.message ?? "submission rejected",
+        finishedAt: new Date().toISOString(),
+      });
+      await save();
+      throw error;
+    }
     Object.assign(item, { hash, phase: "PENDING", submittedAt: new Date().toISOString() });
     await save();
   }
@@ -203,11 +219,11 @@ const write = (name, role, functionName, args, value = 0n) => genStep(name, role
   consensusMaxRotations: 3,
 }));
 
-const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repository}`, { headers: { accept: "application/vnd.github+json", "user-agent": "TaskTrace-v2-integration" } });
+const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repository}`, { headers: githubHeaders });
 assert.equal(repoResponse.status, 200, "GitHub repository metadata unavailable");
 const repo = await repoResponse.json();
 assert.deepEqual({ id: repo.id, owner_id: repo.owner?.id, full_name: repo.full_name }, { id: origin.repository_id, owner_id: origin.owner_id, full_name: `${owner}/${repository}` });
-const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repository}/git/trees/${commitSha}?recursive=1`, { headers: { accept: "application/vnd.github+json", "user-agent": "TaskTrace-v2-integration" } });
+const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repository}/git/trees/${commitSha}?recursive=1`, { headers: githubHeaders });
 assert.equal(treeResponse.status, 200, "GitHub immutable tree unavailable");
 const tree = await treeResponse.json();
 assert.equal(tree.truncated, false, "GitHub evidence tree truncated");
@@ -258,7 +274,8 @@ const terms = {
 
 await write("create-terms", "client", "create_terms", [manifest.dealId, JSON.stringify(terms)]);
 let deal = await readDeal();
-assert.equal(deal.status, "DRAFT_UNFUNDED");
+assert.equal(deal.deal_id, manifest.dealId, "Loaded deal does not match the saved run");
+assert.match(deal.terms_hash, /^[0-9a-f]{64}$/, "Frozen terms hash is missing or malformed");
 await write("fund-terms", "client", "fund_terms", [manifest.dealId, deal.terms_hash], 2000n);
 await write("accept-a", "A", "accept_work", [manifest.dealId, deal.terms_hash], 500n);
 await write("accept-b", "B", "accept_work", [manifest.dealId, deal.terms_hash], 500n);

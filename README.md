@@ -10,7 +10,7 @@ Public demo: **https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d1
 
 The production URL was verified on 9 September 2026 without signing in. It loaded the finalized Bradbury job, all four `SATISFIED` findings, and the exact `+0.03 GEN` recipient-payment evidence.
 
-## V2 release candidate (local, not deployed)
+## V2 release candidate (StudioNet verified, not released)
 
 The next contract is implemented in `contracts/tasktrace_v2.py`; the production
 site intentionally remains on the separately verified v1.1 deployment until the
@@ -21,11 +21,18 @@ review, structured reports, deterministic timeouts/entitlements, and exact route
 receipt confirmation. `contracts/TaskTraceReceiptRouter.sol` only executes and
 records the IC-selected transfer; it cannot choose a verdict or recipient.
 
-Current local checks: GenVM lint passes; 252 Python direct/adversarial regression
-tests pass (157 in the v2 contract suite); 65 React tests plus two receipt tests
-pass; and 16 in-process EVM router cases pass. These component results are not a
-Bradbury deployment claim. Full native GenVM/committee integration and public v2
-configuration remain mandatory before release.
+Current gates: GenVM lint passes; 252 Python direct/adversarial regression tests
+pass (157 in the v2 contract suite); 74 React tests plus two receipt tests,
+TypeScript, the production bundle and dependency audit pass; and 16 EVM router cases
+pass. The pinned contract is also deployed to gasless StudioNet for semantic-only
+verification at `0x41BcdFB280BD26939cb6956B55ddA7e85b4567c9`. Both full lifecycle
+committee cases passed: a faithful pair was assessed A/B `SATISFIED`, while a
+late contradictory sentence was detected across the complete artifact and
+assessed A `VIOLATED`, B `SATISFIED`. Five additional finalized GenVM writes
+rejected a confused hostname, wrong owner, mutable version, malformed SHA-256
+and incomplete obligation set without persisting a deal. These results are not a
+Bradbury deployment or native router-settlement claim; public v2 selection still
+requires the separate release approval and Bradbury receipt round trip.
 
 ## The idea
 
@@ -81,6 +88,16 @@ See [Bradbury receipts and manifest](reports/bradbury-release/) and the [verific
 
 See [v1.1 receipts](reports/studionet-sep07probe/), [React/provider E2E evidence](reports/frontend-live/), [historical failures](reports/archive/), [direct test report](reports/direct-tests.xml), and [resume notes](docs/RESUME.md). StudioNet cannot establish an EVM recipient payout; that requires separate Bradbury verification.
 
+### V2 semantic release gate
+
+- Contract: `0x41BcdFB280BD26939cb6956B55ddA7e85b4567c9`; deployment transaction `0xea5700856225a70267eb8d4dce92e0b9c1ddb2223d35685a4e971b449a4f2cef`.
+- Exact contract source SHA-256: `3133e10bf159d16a9fa49a1ec93f70cd02d1396e6f37983ed75534c5b2c3768e`; immutable evidence commit `f4b48b235d15c0be61cbd75bf491dde1b98ad058`.
+- 17/17 positive lifecycle writes finalized with successful execution across two committee-reviewed cases.
+- 5/5 adversarial writes finalized with the expected execution failure and no persisted deal.
+- StudioNet router was intentionally set to `0x000000000000000000000000000000000000dEaD`; the run proves semantic consensus and deterministic rejection, not transfer completion.
+
+See [the sanitized V2 StudioNet manifest](reports/v2-studionet-semantic/manifest.json) and [V2 release-candidate checkpoint](docs/V2-CORE-PROGRESS.md).
+
 ## Local setup
 
 Requirements: a current Node.js compatible with Vite 7, npm, Python 3.12, and `uv`. The checkpoint was built on Windows. Do not put a funded private key in a frontend variable.
@@ -111,9 +128,10 @@ The direct test harness has a narrow Windows compatibility workaround for an ups
 
 ```powershell
 npm run test:integration
+npm run test:v2:studionet
 ```
 
-This command submits live StudioNet transactions, not local unit tests. It uses dedicated keys in ignored `.secrets/studionet.json`, **not** the funded root `.env`. It persists transaction hashes before polling and will not silently resubmit uncertain writes.
+These commands submit live StudioNet transactions, not local unit tests. They use dedicated keys in ignored `.secrets/`, **not** the funded root `.env`. Each runner persists transaction hashes before polling and will not silently resubmit uncertain writes. The V2 runner deliberately disables the settlement router because StudioNet does not certify the native EVM payout path.
 
 The committed report is a historical run, not reusable signing material. Resuming it requires the original local StudioNet keys and unchanged source. On a fresh clone the runner will refuse mismatching wallets. Read the [resume instructions](docs/RESUME.md) before starting a new run; never delete failure evidence to make results look clean.
 
