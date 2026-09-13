@@ -794,9 +794,9 @@ def _router_fund_calldata(receipt):
     ))
 
 
-def _router_receipt_digest(router, receipt_id):
-    encoder = gl.evm.MethodEncoder("receiptDigest", (gl.evm.bytes32,), gl.evm.bytes32)
-    raw = _evm_read_exact(router, encoder.encode_call((bytes.fromhex(receipt_id),)))
+def _router_receipt_digest(router, source_contract, receipt_id):
+    encoder = gl.evm.MethodEncoder("receiptDigest", (Address, gl.evm.bytes32), gl.evm.bytes32)
+    raw = _evm_read_exact(router, encoder.encode_call((Address(source_contract), bytes.fromhex(receipt_id))))
     value = encoder.decode_ret(raw)
     _require(type(value) is bytes and len(value) == 32, "ROUTER_RECEIPT_RESPONSE")
     return value.hex()
@@ -1106,7 +1106,7 @@ class TaskTraceV2(gl.Contract):
         _require(len(matches) == 1 and matches[0]["state"] == "ROUTED", "LEG_NOT_ROUTED")
         leg = matches[0]
         expected = _receipt_expected(deal, leg, "RELEASED")
-        _require(_router_receipt_digest(Address(self.router), leg["receipt_id"]) == _receipt_digest(expected), "RECEIPT_MISMATCH")
+        _require(_router_receipt_digest(Address(self.router), deal["contract"], leg["receipt_id"]) == _receipt_digest(expected), "RECEIPT_MISMATCH")
         _receipt_matches(expected, expected)
         leg["state"] = "CONFIRMED"
         leg["confirmed_at"] = _now()

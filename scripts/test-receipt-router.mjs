@@ -28,48 +28,54 @@ const termsHash = `0x${"33".repeat(32)}`;
 const decisionHash = `0x${"44".repeat(32)}`;
 const amount = 123456789n;
 const args = [receiptId, dealHash, 1, 7, termsHash, decisionHash, recipient.account.address, 1];
+const outsiderRouter = getContract({ address: router.address, abi: compiled.abi, client: { public: publicClient, wallet: outsider } });
 
+// An attacker may use the same predictable receipt ID, but only inside its own
+// source namespace. It cannot block or authenticate the legitimate IC receipt.
+await outsiderRouter.write.fund([receiptId, dealHash, 1, 7, termsHash, decisionHash, outsider.account.address, 1], { value: 1n });
+assert.equal(await router.read.receiptState([outsider.account.address, receiptId]), 1);
+assert.equal(await router.read.receiptState([source.account.address, receiptId]), 0);
 await router.write.fund(args, { value: amount, account: source.account });
-assert.equal(await router.read.receiptState([receiptId]), 1);
-assert.equal(await publicClient.getBalance({ address: router.address }), amount);
+assert.equal(await router.read.receiptState([source.account.address, receiptId]), 1);
+assert.equal(await publicClient.getBalance({ address: router.address }), amount + 1n);
 
 const fundedDigest = sha256(encodePacked(
   ["string", "bytes1", "uint256", "address", "address", "bytes32", "uint8", "uint32", "bytes32", "bytes32", "bytes32", "address", "uint256", "uint8", "uint8"],
   ["TASKTRACE_RECEIPT_V2", "0x00", await publicClient.getChainId(), router.address, source.account.address, dealHash, 1, 7, termsHash, decisionHash, receiptId, recipient.account.address, amount, 1, 1],
 ));
-assert.equal(await router.read.receiptDigest([receiptId]), fundedDigest);
+assert.equal(await router.read.receiptDigest([source.account.address, receiptId]), fundedDigest);
 
 await assert.rejects(router.write.fund(args, { value: amount, account: outsider.account }));
-const outsiderRouter = getContract({ address: router.address, abi: compiled.abi, client: { public: publicClient, wallet: outsider } });
-await assert.rejects(outsiderRouter.write.release([receiptId]));
-assert.equal(await router.read.receiptState([receiptId]), 1);
+await assert.rejects(outsiderRouter.write.release([source.account.address, receiptId]));
+assert.equal(await router.read.receiptState([source.account.address, receiptId]), 1);
 
 const recipientRouter = getContract({ address: router.address, abi: compiled.abi, client: { public: publicClient, wallet: recipient } });
-await recipientRouter.write.release([receiptId]);
-assert.equal(await router.read.receiptState([receiptId]), 2);
-assert.equal(await publicClient.getBalance({ address: router.address }), 0n);
+await recipientRouter.write.release([source.account.address, receiptId]);
+assert.equal(await router.read.receiptState([source.account.address, receiptId]), 2);
+assert.equal(await router.read.receiptState([outsider.account.address, receiptId]), 1);
+assert.equal(await publicClient.getBalance({ address: router.address }), 1n);
 
 const releasedDigest = sha256(encodePacked(
   ["string", "bytes1", "uint256", "address", "address", "bytes32", "uint8", "uint32", "bytes32", "bytes32", "bytes32", "address", "uint256", "uint8", "uint8"],
   ["TASKTRACE_RECEIPT_V2", "0x00", await publicClient.getChainId(), router.address, source.account.address, dealHash, 1, 7, termsHash, decisionHash, receiptId, recipient.account.address, amount, 1, 2],
 ));
-assert.equal(await router.read.receiptDigest([receiptId]), releasedDigest);
-await assert.rejects(recipientRouter.write.release([receiptId]));
+assert.equal(await router.read.receiptDigest([source.account.address, receiptId]), releasedDigest);
+await assert.rejects(recipientRouter.write.release([source.account.address, receiptId]));
 
 const rejecting = await deploy("RejectingReceiptRecipient");
 const rejectedId = `0x${"55".repeat(32)}`;
 await router.write.fund([rejectedId, dealHash, 2, 8, termsHash, decisionHash, rejecting.address, 2], { value: 100n, account: source.account });
-await assert.rejects(rejecting.write.trigger([router.address, rejectedId]));
-assert.equal(await router.read.receiptState([rejectedId]), 1);
-assert.equal(await publicClient.getBalance({ address: router.address }), 100n);
+await assert.rejects(rejecting.write.trigger([router.address, source.account.address, rejectedId]));
+assert.equal(await router.read.receiptState([source.account.address, rejectedId]), 1);
+assert.equal(await publicClient.getBalance({ address: router.address }), 101n);
 
 const reentering = await deploy("ReenteringReceiptRecipient");
 const reenteredId = `0x${"66".repeat(32)}`;
 await router.write.fund([reenteredId, dealHash, 2, 9, termsHash, decisionHash, reentering.address, 3], { value: 200n, account: source.account });
-await reentering.write.trigger([router.address, reenteredId]);
-assert.equal(await router.read.receiptState([reenteredId]), 2);
+await reentering.write.trigger([router.address, source.account.address, reenteredId]);
+assert.equal(await router.read.receiptState([source.account.address, reenteredId]), 2);
 assert.equal(await reentering.read.reentered(), false);
 assert.equal(await publicClient.getBalance({ address: reentering.address }), 200n);
-assert.equal(await publicClient.getBalance({ address: router.address }), 100n);
+assert.equal(await publicClient.getBalance({ address: router.address }), 101n);
 
-console.log(JSON.stringify({ passed: true, cases: 16, router: router.address }));
+console.log(JSON.stringify({ passed: true, cases: 20, router: router.address }));

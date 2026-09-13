@@ -3,16 +3,16 @@ import type {Address,Hash} from "viem";
 import {chain} from "./client";
 import {friendlyError} from "./errors";
 
-export const routerAbi=[{type:"function",name:"release",stateMutability:"nonpayable",inputs:[{name:"receiptId",type:"bytes32"}],outputs:[]},{type:"function",name:"receiptState",stateMutability:"view",inputs:[{name:"receiptId",type:"bytes32"}],outputs:[{type:"uint8"}]}] as const;
+export const routerAbi=[{type:"function",name:"release",stateMutability:"nonpayable",inputs:[{name:"sourceContract",type:"address"},{name:"receiptId",type:"bytes32"}],outputs:[]},{type:"function",name:"receiptState",stateMutability:"view",inputs:[{name:"sourceContract",type:"address"},{name:"receiptId",type:"bytes32"}],outputs:[{type:"uint8"}]}] as const;
 export type RouterPhase="SIGNING"|"PENDING"|"FINALIZED_SUCCESS"|"FAILED"|"REJECTED"|"UNKNOWN";
-export type RouterRecord={id:string;dealId:string;receiptId:string;account:string;chainId:number;router:string;phase:RouterPhase;hash?:Hash;error?:string;createdAt:number};
+export type RouterRecord={id:string;dealId:string;receiptId:string;sourceContract:string;account:string;chainId:number;router:string;phase:RouterPhase;hash?:Hash;error?:string;createdAt:number};
 const pending=(record:RouterRecord)=>["SIGNING","PENDING","UNKNOWN"].includes(record.phase);
 export const routerHistoryKey=(router:string)=>`tasktrace:v2:router:${chain.id}:${router.toLowerCase()}`;
 
 export function routerHistory(router:string):RouterRecord[]{
   const raw=localStorage.getItem(routerHistoryKey(router));if(!raw)return [];
   const value:unknown=JSON.parse(raw);
-  const valid=Array.isArray(value)&&value.every(item=>item&&item.chainId===chain.id&&typeof item.router==="string"&&item.router.toLowerCase()===router.toLowerCase()&&typeof item.id==="string"&&typeof item.dealId==="string"&&/^[\da-f]{64}$/i.test(item.receiptId)&&/^0x[\da-f]{40}$/i.test(item.account)&&typeof item.createdAt==="number"&&["SIGNING","PENDING","FINALIZED_SUCCESS","FAILED","REJECTED","UNKNOWN"].includes(item.phase)&&(item.hash===undefined||/^0x[\da-f]{64}$/i.test(item.hash)));
+  const valid=Array.isArray(value)&&value.every(item=>item&&item.chainId===chain.id&&typeof item.router==="string"&&item.router.toLowerCase()===router.toLowerCase()&&typeof item.id==="string"&&typeof item.dealId==="string"&&/^[\da-f]{64}$/i.test(item.receiptId)&&/^0x[\da-f]{40}$/i.test(item.sourceContract)&&/^0x[\da-f]{40}$/i.test(item.account)&&typeof item.createdAt==="number"&&["SIGNING","PENDING","FINALIZED_SUCCESS","FAILED","REJECTED","UNKNOWN"].includes(item.phase)&&(item.hash===undefined||/^0x[\da-f]{64}$/i.test(item.hash)));
   if(!valid)throw new Error("Invalid receipt-release journal. Check the wallet before attempting another release.");
   return value as RouterRecord[];
 }
@@ -28,7 +28,7 @@ function provider(){
   return value;
 }
 
-export async function releaseRouterReceipt(router:Address,account:Address,dealId:string,receiptId:string):Promise<RouterRecord>{
+export async function releaseRouterReceipt(router:Address,sourceContract:Address,account:Address,dealId:string,receiptId:string):Promise<RouterRecord>{
   if(!navigator.locks)throw new Error("Web Locks are required to prevent duplicate receipt releases");
   const key=routerHistoryKey(router);
   return navigator.locks.request(key,{ifAvailable:true},async lock=>{
@@ -36,11 +36,11 @@ export async function releaseRouterReceipt(router:Address,account:Address,dealId
     const ethereum=provider(),accounts=await ethereum.request({method:"eth_accounts"}) as string[];
     if(accounts[0]?.toLowerCase()!==account.toLowerCase())throw new Error("Wallet account changed. Reconnect before signing.");
     if(Number(await ethereum.request({method:"eth_chainId"}))!==chain.id)throw new Error(`Switch the wallet to ${chain.name}`);
-    const record:RouterRecord={id:crypto.randomUUID(),dealId,receiptId,account,chainId:chain.id,router,phase:"SIGNING",createdAt:Date.now()};save(record);
+    const record:RouterRecord={id:crypto.randomUUID(),dealId,receiptId,sourceContract,account,chainId:chain.id,router,phase:"SIGNING",createdAt:Date.now()};save(record);
     try{
       const publicClient=createPublicClient({chain,transport:http(chain.rpcUrls.default.http[0])});
       const wallet=createWalletClient({chain,account,transport:custom(ethereum)});
-      const {request}=await publicClient.simulateContract({address:router,abi:routerAbi,functionName:"release",args:[`0x${receiptId}`],account});
+      const {request}=await publicClient.simulateContract({address:router,abi:routerAbi,functionName:"release",args:[sourceContract,`0x${receiptId}`],account});
       record.hash=await wallet.writeContract(request);record.phase="PENDING";save(record);
       const receipt=await publicClient.waitForTransactionReceipt({hash:record.hash});
       record.phase=receipt.status==="success"?"FINALIZED_SUCCESS":"FAILED";

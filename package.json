@@ -10,6 +10,10 @@
     "test:v2:local": "node scripts/integration-v2-local.mjs",
     "test:v2:studionet": "node scripts/integration-v2-studionet.mjs",
     "test:router": "node scripts/test-receipt-router.mjs",
+    "test:worker": "vitest run --config vitest.worker.config.ts",
+    "test:openai-smoke": "node scripts/worker-openai-smoke.mjs",
+    "build:worker": "tsc -p worker/tsconfig.json --noEmit",
+    "worker:deploy:dry": "wrangler deploy --dry-run --config worker/wrangler.jsonc",
     "test:live-wallet": "vitest run --config vitest.live.config.ts --reporter=verbose",
     "test:types": "tsc -p tsconfig.tests.json",
     "dev": "vite",
@@ -21,9 +25,11 @@
     "genlayer-js": "1.1.8",
     "lucide-react": "0.468.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "viem": "2.56.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20260911.1",
     "@nomicfoundation/hardhat-viem": "^3.0.9",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.0",
@@ -35,6 +41,7 @@
     "jsdom": "26.1.0",
     "typescript": "5.9.3",
     "vite": "7.3.6",
-    "vitest": "5.0.0"
+    "vitest": "5.0.0",
+    "wrangler": "4.131.1"
   }
 }

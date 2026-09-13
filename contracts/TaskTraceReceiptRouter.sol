@@ -21,7 +21,7 @@ contract TaskTraceReceiptRouter {
         uint8 state;
     }
 
-    mapping(bytes32 => Receipt) private receipts;
+    mapping(address => mapping(bytes32 => Receipt)) private receipts;
     bool private entered;
 
     event ReceiptFunded(
@@ -36,7 +36,12 @@ contract TaskTraceReceiptRouter {
         uint256 amount,
         uint8 kind
     );
-    event ReceiptReleased(bytes32 indexed receiptId, address indexed recipient, uint256 amount);
+    event ReceiptReleased(
+        bytes32 indexed receiptId,
+        address indexed sourceContract,
+        address indexed recipient,
+        uint256 amount
+    );
 
     error InvalidReceipt();
     error ReceiptExists();
@@ -58,8 +63,8 @@ contract TaskTraceReceiptRouter {
             receiptId == bytes32(0) || recipient == address(0) || msg.value == 0
                 || (role != 1 && role != 2) || kind < 1 || kind > 3
         ) revert InvalidReceipt();
-        if (receipts[receiptId].state != 0) revert ReceiptExists();
-        receipts[receiptId] = Receipt({
+        if (receipts[msg.sender][receiptId].state != 0) revert ReceiptExists();
+        receipts[msg.sender][receiptId] = Receipt({
             sourceContract: msg.sender,
             dealHash: dealHash,
             role: role,
@@ -85,8 +90,8 @@ contract TaskTraceReceiptRouter {
         );
     }
 
-    function release(bytes32 receiptId) external {
-        Receipt storage receipt = receipts[receiptId];
+    function release(address sourceContract, bytes32 receiptId) external {
+        Receipt storage receipt = receipts[sourceContract][receiptId];
         if (receipt.state != FUNDED) revert InvalidReceipt();
         if (msg.sender != receipt.recipient) revert NotRecipient();
         if (entered) revert Reentrancy();
@@ -95,11 +100,11 @@ contract TaskTraceReceiptRouter {
         (bool success,) = payable(receipt.recipient).call{value: receipt.amount}("");
         if (!success) revert TransferFailed();
         entered = false;
-        emit ReceiptReleased(receiptId, receipt.recipient, receipt.amount);
+        emit ReceiptReleased(receiptId, sourceContract, receipt.recipient, receipt.amount);
     }
 
-    function receiptDigest(bytes32 receiptId) external view returns (bytes32) {
-        Receipt storage receipt = receipts[receiptId];
+    function receiptDigest(address sourceContract, bytes32 receiptId) external view returns (bytes32) {
+        Receipt storage receipt = receipts[sourceContract][receiptId];
         if (receipt.state == 0) return bytes32(0);
         return sha256(
             abi.encodePacked(
@@ -122,7 +127,7 @@ contract TaskTraceReceiptRouter {
         );
     }
 
-    function receiptState(bytes32 receiptId) external view returns (uint8) {
-        return receipts[receiptId].state;
+    function receiptState(address sourceContract, bytes32 receiptId) external view returns (uint8) {
+        return receipts[sourceContract][receiptId].state;
     }
 }

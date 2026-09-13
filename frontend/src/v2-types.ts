@@ -41,7 +41,7 @@ export interface V2Submission {
   commitment: V2Commitment;
 }
 
-export interface V2SourceAssessment {
+export interface V2VerifiedSourceAssessment {
   artifact_id: EvidenceRole;
   adapter: "github-commit-v1";
   provider: "github";
@@ -58,6 +58,15 @@ export interface V2SourceAssessment {
   sha256: string;
   status: "VERIFIED";
 }
+
+export interface V2UnavailableSourceAssessment {
+  artifact_id: EvidenceRole;
+  status: "NOT_VERIFIED" | "MISSING";
+  commitment?: V2Commitment | null;
+  reason_code: string;
+}
+
+export type V2SourceAssessment = V2VerifiedSourceAssessment | V2UnavailableSourceAssessment;
 
 export interface V2Citation {
   id: string;

@@ -111,12 +111,12 @@ def test_public_lifecycle_keeps_review_and_receipt_authority_in_contract(core, m
         leg = next(item for item in routed["settlement_legs"] if item["id"] == original["id"])
         expected = m._receipt_expected(routed, leg, "RELEASED")
         if original["sequence"] == 0:
-            monkeypatch.setattr(m, "_router_receipt_digest", lambda router, receipt_id: "00" * 32)
+            monkeypatch.setattr(m, "_router_receipt_digest", lambda router, source_contract, receipt_id: "00" * 32)
             with pytest.raises(m.gl.vm.UserError, match="RECEIPT_MISMATCH"):
                 c.confirm_settlement("work-1", original["id"])
             unchanged = next(item for item in json.loads(c.get_terms("work-1"))["settlement_legs"] if item["id"] == original["id"])
             assert unchanged["state"] == "ROUTED"
-        monkeypatch.setattr(m, "_router_receipt_digest", lambda router, receipt_id, value=m._receipt_digest(expected): value)
+        monkeypatch.setattr(m, "_router_receipt_digest", lambda router, source_contract, receipt_id, value=m._receipt_digest(expected): value)
         c.confirm_settlement("work-1", original["id"])
         with pytest.raises(m.gl.vm.UserError, match="LEG_NOT_ROUTED"):
             c.confirm_settlement("work-1", original["id"])
@@ -419,8 +419,8 @@ def test_receipt_digest_and_router_abi_match_solidity_reference(core):
     expected = receipt(m)
     assert m._receipt_digest(expected) == "a594b2c908eb708fdc03f773c04ce85dd2bdec9c6e2598de822d53dc5da18850"
     assert m._router_fund_calldata({**expected, "state": "FUNDED"})[:4].hex() == "6e4e63e1"
-    encoder = m.gl.evm.MethodEncoder("receiptDigest", (m.gl.evm.bytes32,), m.gl.evm.bytes32)
-    assert encoder.encode_call((bytes.fromhex(expected["receipt_id"]),))[:4].hex() == "f74c8cac"
+    encoder = m.gl.evm.MethodEncoder("receiptDigest", (m.Address, m.gl.evm.bytes32), m.gl.evm.bytes32)
+    assert encoder.encode_call((m.Address(expected["source_contract"]), bytes.fromhex(expected["receipt_id"])))[:4].hex() == "86c40e4e"
 
 
 @pytest.mark.parametrize("outcome,expected", [("SATISFIED", (10, 0, 5)), ("VIOLATED", (0, 13, 2)), ("UNASSESSABLE", (0, 10, 5))])

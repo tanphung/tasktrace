@@ -1,5 +1,12 @@
 # TaskTrace — Evidence schema v0.2
 
+## Release addendum — receipt lookup and worker provenance (13/09/2026)
+
+- Router lookup identity is `(source_contract, receipt_id)`. `source_contract` is an explicit argument for `release`, `receiptDigest` and `receiptState`, and must equal the source stored by `fund` from `msg.sender`.
+- Worker journal entries bind chain, IC, deal, role, revision, terms hash, model ID, prompt version, input hash, output hash, immutable GitHub commit/path/blob, transaction intent/hash and timestamps. This journal is operational evidence only; the Intelligent Contract independently fetches the committed artifact and stores the authoritative assessment.
+- OpenAI credentials, wallet private keys and GitHub write credentials are never fields in evidence, logs, frontend configuration or public reports.
+- The private operational cost journal stores integer nano-USD and request states `RESERVED`, `DISPATCHED`, `UNCERTAIN`, `SETTLED`. It is not contract evidence and cannot affect any obligation or settlement decision.
+
 ## v2 design supersession — 09/09/2026
 
 The current proposed schema is defined in [IC-V2-ARCHITECTURE.md](IC-V2-ARCHITECTURE.md), sections 2–6. All older addenda below describe v1.1 history, not the new requirements.

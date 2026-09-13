@@ -1,5 +1,15 @@
 # V2 release-candidate checkpoint — 13 September 2026
 
+## Current release implementation checkpoint — 13 September 2026 16:54 ICT
+
+- Current IC source SHA-256: `7ec34154e1bb490649ba0e1362c36886012f0c961af04a0bfad840e2a5f4d927`.
+- Fresh gasless StudioNet contract: `0x21f3D8DBB47DFb7dd031a7bC453614513c86DFfF`. The complete fresh run in `reports/v2-studionet-release-20260913/` passed 2 semantic cases and 5 expected-rejection cases. Happy produced A/B `SATISFIED`; valid-prefix/conflicting-tail produced A `VIOLATED`, B `SATISFIED`. The run is semantic/provenance committee evidence only and deliberately uses the disabled router.
+- GenVM lint/ABI passes on the pinned concrete runner; the newer rc7 SDK was inspected and still exposes status/headers/body without redirect policy or redirect history. Therefore the source rejects every surfaced 3xx and all identity mismatches, but the hidden-redirect capability gate remains open and is not misreported as solved.
+- Full Python regression: 252/252. Current router namespace suite: 20/20. Frontend: 80/80 plus receipt 2/2. Worker: 10/10, TypeScript build and Wrangler dry-run pass; fresh D1 migration enforces the approved 800,000,000 nano-USD cap.
+- Cloudflare worker source now implements wallet-bound chain/contract/deal/terms authorization, per-client/global quota, durable checkpoints, A/B distinct signing identities, full immutable GitHub artifacts, B-after-finalized-A, and an OpenAI `RESERVED -> DISPATCHED -> SETTLED|UNCERTAIN` journal. It never requests review or performs settlement.
+- One real OpenAI smoke request was attempted only after fixture tests. The provider returned HTTP 401 because the `.env` value is not a valid active API key. Actual billed usage recorded by TaskTrace is 0 USD; the conservative unresolved local reserve is 1,374,200 nano-USD (0.0013742 USD), and the script refuses to retry that request ID. No key value is logged or committed.
+- Bradbury V2, the remote Cloudflare worker and the V2 frontend are **not deployed**. Per owner policy, the native IC -> router -> recipient -> IC receipt round trip must be proved only after all predeployment results are reviewed and the owner explicitly confirms deployment.
+
 Current source is `contracts/tasktrace_v2.py`, not the former draft-only
 `tasktrace_v2_core.py`. The IC now exposes the complete funded lifecycle,
 independently acquires all committed GitHub bytes in leader and validator runs,

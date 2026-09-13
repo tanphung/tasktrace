@@ -1,5 +1,7 @@
 # TaskTrace — rà soát cạnh tranh và kế hoạch hoàn thiện
 
+> Kế hoạch thực hiện hiện hành từ 13/09/2026: [RELEASE-COMPLETION-PLAN.md](RELEASE-COMPLETION-PLAN.md). Tài liệu mới hợp nhất phần còn thiếu của IC V2, worker OpenAI được hosting, UX, kiểm thử và hồ sơ; thay thế lịch R0–R5 bên dưới. Video và việc nộp do người dùng tự thực hiện. Những phân tích cũ dưới đây giữ làm lịch sử, không phải trạng thái release hiện tại.
+
 Ngày: 09/09/2026, UTC+7. Trạng thái: KẾ HOẠCH HIỆN HÀNH, CHƯA HOÀN THÀNH.
 
 > Cập nhật yêu cầu contract: [IC-V2-ARCHITECTURE.md](IC-V2-ARCHITECTURE.md) là nguồn ưu tiên cho kiến trúc và thứ tự triển khai. Người dùng yêu cầu provenance bên ngoài và receipt confirmation trong Intelligent Contract. Vì vậy đề xuất freeze v1.1/generic frontend verifier bên dưới đã bị thay thế. V1.1 chỉ còn baseline lịch sử. Lịch R0–R5 là ước lượng cũ, phải tính lại sau feasibility gates của v2. Không deploy v2 trước khi toàn bộ contract tests pass và người dùng xác nhận.

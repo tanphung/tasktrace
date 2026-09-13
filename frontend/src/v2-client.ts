@@ -17,7 +17,9 @@ export function validateV2Deal(value:unknown,id:string):V2Deal{
     if(deal.report.schema_version!=="tasktrace-report-2"||deal.report.job_id!==id||deal.report.contract.toLowerCase()!==contract.toLowerCase()||deal.report.terms_hash!==deal.terms_hash)throw new Error("V2 report identity mismatch");
     const assessed=deal.report.obligation_assessments.map(item=>item.obligation_id);
     if(assessed.length!==obligationIds.length||new Set(assessed).size!==assessed.length||assessed.some(item=>!obligationIds.includes(item)))throw new Error("V2 report does not cover the exact obligation set");
-    if(deal.report.source_assessments.length!==3||new Set(deal.report.source_assessments.map(item=>item.artifact_id)).size!==3||deal.report.source_assessments.some(item=>item.status!=="VERIFIED"||item.hostname!=="api.github.com"))throw new Error("V2 source provenance report is incomplete");
+    const sourceIds=deal.report.source_assessments.map(item=>item.artifact_id);
+    if(sourceIds.length!==3||new Set(sourceIds).size!==3||(["SOURCE","A","B"] as const).some(item=>!sourceIds.includes(item)))throw new Error("V2 source provenance report is incomplete");
+    if(deal.report.source_assessments.some(item=>item.status==="VERIFIED"?item.hostname!=="api.github.com":!item.reason_code))throw new Error("V2 source provenance report is incomplete");
     const citationIds=new Set(deal.report.evidence_citations.map(item=>item.id));
     if(deal.report.obligation_assessments.some(item=>item.citation_ids.some(citation=>!citationIds.has(citation))))throw new Error("V2 report references a missing citation");
   }
@@ -26,11 +28,18 @@ export function validateV2Deal(value:unknown,id:string):V2Deal{
 }
 
 export async function listV2Deals():Promise<string[]>{
-  const raw=await readClient.readContract({address:contract,functionName:"list_deals",args:[0n,50n],transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
-  if(typeof raw!=="string")throw new Error("Unexpected v2 deal list");
-  const value=JSON.parse(raw) as {total:number;ids:string[]};
-  if(!Array.isArray(value.ids)||value.ids.some(id=>typeof id!=="string"))throw new Error("Invalid v2 deal list");
-  return value.ids;
+  const ids:string[]=[];let total=0;
+  do{
+    const raw=await readClient.readContract({address:contract,functionName:"list_deals",args:[BigInt(ids.length),50n],transactionHashVariant:TransactionHashVariant.LATEST_FINAL});
+    if(typeof raw!=="string")throw new Error("Unexpected v2 deal list");
+    const value=JSON.parse(raw) as {total:number;ids:string[]};
+    if(!Number.isSafeInteger(value.total)||value.total<0||!Array.isArray(value.ids)||value.ids.some(id=>typeof id!=="string"||!id)||value.ids.length>50)throw new Error("Invalid v2 deal list");
+    if(ids.length===0)total=value.total;else if(value.total!==total)throw new Error("V2 deal list changed while paging; retry");
+    if(value.ids.length===0&&ids.length<total)throw new Error("Incomplete v2 deal list");
+    ids.push(...value.ids);
+  }while(ids.length<total);
+  if(ids.length!==total||new Set(ids).size!==ids.length)throw new Error("Invalid v2 deal list");
+  return ids;
 }
 
 export async function readV2Deal(id:string):Promise<V2Deal>{

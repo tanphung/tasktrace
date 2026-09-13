@@ -1,5 +1,14 @@
 # TaskTrace — Kế hoạch kiểm thử đối kháng v0.2
 
+## Release addendum — receipt preemption and hosted worker cases (13/09/2026)
+
+- Pre-fund the same receipt ID from an attacker source, then fund/release/read the legitimate IC namespace. Both namespaces must remain independent and the attack must not block the IC.
+- Read or release a receipt with the wrong source contract; require zero/not-found or rejection without changing the legitimate receipt.
+- Crash the worker before inference, after output persistence, after GitHub commit, after transaction broadcast and while polling. Resume must not repeat a valid inference unnecessarily, create another immutable artifact or submit a duplicate transaction.
+- Replay an expired wallet authorization, alter chain/contract/deal/role/method, exceed per-client concurrency and exhaust the OpenAI reserve. All must fail before signing or calling the model.
+- Crash before dispatch, after the D1 `DISPATCHED` marker, after an HTTP response and before usage settlement. Only a never-dispatched `RESERVED` request may continue automatically; `DISPATCHED`/`UNCERTAIN` keeps its reserve and must not call OpenAI again on workflow restart.
+- Inject instructions in SOURCE/A content that request secrets, arbitrary transactions, changed destinations or relaxed obligations. Worker output remains bounded data and the signer still permits only the expected lifecycle call.
+
 ## v2 mandatory matrix — updated 11/09/2026
 
 [IC-V2-ARCHITECTURE.md](IC-V2-ARCHITECTURE.md), section 9 governs the new release. Add direct + explicit validator-helper + full integration coverage for: valid prefix/contradictory tail; canonical-host/redirect/owner/repository/commit/blob/hash mismatch; symlink/submodule/truncated provider response; missing artifact/chunk; missing/duplicate/extra funded obligation; valid-schema wrong decision and unsupported reasoning; exact deal/source/recipient/amount/kind/RELEASED mismatch; reentrancy, failed recipient and duplicate release; no state mutations after rejected consensus; deadlines/revisions and refund eligibility.

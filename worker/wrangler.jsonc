@@ -1,0 +1,28 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "tasktrace-agent-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "OPENAI_WORKER_MODEL": "gpt-5.6-luna",
+    "GENLAYER_RPC_URL": "https://studio.genlayer.com/api",
+    "TASKTRACE_CHAIN_ID": "4221",
+    "TASKTRACE_V2_CONTRACT": "0x0000000000000000000000000000000000000000",
+    "EVIDENCE_GITHUB_OWNER": "tanphung",
+    "EVIDENCE_GITHUB_REPOSITORY": "tasktrace-evidence",
+    "ALLOWED_ORIGIN": "https://tasktrace-genlayer.vercel.app"
+  },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "tasktrace-worker-db",
+    "database_id": "00000000-0000-0000-0000-000000000000",
+    "migrations_dir": "migrations"
+  }],
+  "workflows": [{
+    "binding": "TASKTRACE_RUNNER",
+    "name": "tasktrace-agent-workflow",
+    "class_name": "TaskTraceWorkflow"
+  }],
+  "observability": {"enabled": true, "head_sampling_rate": 1}
+}

@@ -307,7 +307,7 @@ for (const leg of deal.settlement_legs) {
   deal = await readDeal();
   const routed = deal.settlement_legs.find((item) => item.id === leg.id);
   assert.equal(routed.state, "ROUTED");
-  assert.equal(await getContract({ address: manifest.router, abi: routerArtifact.abi, client: evmPublic }).read.receiptState([`0x${routed.receipt_id}`]), 1);
+  assert.equal(await getContract({ address: manifest.router, abi: routerArtifact.abi, client: evmPublic }).read.receiptState([manifest.contract, `0x${routed.receipt_id}`]), 1);
   const role = addressToRole[routed.recipient.toLowerCase()];
   assert.ok(role, `No local signer for receipt recipient ${routed.recipient}`);
   const releaseStep = `release-${routed.sequence}`;
@@ -317,7 +317,7 @@ for (const leg of deal.settlement_legs) {
     if (!item) {
       item = manifest.steps[releaseStep] = { phase: "SIGNING", startedAt: new Date().toISOString() };
       await save();
-      const hash = await router.write.release([`0x${routed.receipt_id}`]);
+      const hash = await router.write.release([manifest.contract, `0x${routed.receipt_id}`]);
       Object.assign(item, { hash, phase: "PENDING", submittedAt: new Date().toISOString() });
       await save();
     }

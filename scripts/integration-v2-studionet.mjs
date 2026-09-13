@@ -8,7 +8,9 @@ import { studionet } from "genlayer-js/chains";
 import { assertExecution, executionName, statusName } from "./receipts.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const reportDir = resolve(root, "reports", "v2-studionet-semantic");
+const reportName = process.env.TASKTRACE_STUDIONET_REPORT ?? "v2-studionet-semantic";
+assert.match(reportName, /^v2-studionet-[a-z0-9-]{1,48}$/, "Unsafe StudioNet report directory name");
+const reportDir = resolve(root, "reports", reportName);
 const manifestPath = resolve(reportDir, "manifest.json");
 const secretsPath = resolve(root, ".secrets", "v2-studionet-semantic.json");
 const evidenceCommit = "f4b48b235d15c0be61cbd75bf491dde1b98ad058";

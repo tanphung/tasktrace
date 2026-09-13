@@ -1,8 +1,9 @@
 import {render,screen} from "@testing-library/react";
-import {describe,expect,it} from "vitest";
-import {contract,evidenceChainId} from "../../frontend/src/client";
-import {validateV2Deal} from "../../frontend/src/v2-client";
+import {describe,expect,it,vi} from "vitest";
+import {contract,evidenceChainId,readClient} from "../../frontend/src/client";
+import {listV2Deals,validateV2Deal} from "../../frontend/src/v2-client";
 import {V2Report} from "../../frontend/src/V2Report";
+import {V2Worker} from "../../frontend/src/V2Worker";
 import type {V2Deal,V2Report as Report,V2SourceAssessment} from "../../frontend/src/v2-types";
 
 const hash="a".repeat(64),commit="b".repeat(40),router=`0x${"44".repeat(20)}`;
@@ -28,5 +29,9 @@ function report():Report{
 describe("TaskTrace v2 finalized-state renderer",()=>{
   it("does not invent a report while consensus is pending",()=>{render(<V2Report deal={fixture()}/>);expect(screen.getByText("No authoritative report yet")).toBeInTheDocument();expect(screen.queryByText("100%")).not.toBeInTheDocument();});
   it("accepts a report only when it covers the exact frozen obligation set",()=>{const deal=fixture();deal.report=report();expect(validateV2Deal(deal,"deal-1")).toBe(deal);deal.report.obligation_assessments.pop();expect(()=>validateV2Deal(deal,"deal-1")).toThrow("exact obligation set");});
-  it("rejects a source assessment outside the canonical GitHub API host",()=>{const deal=fixture();deal.report=report();deal.report.source_assessments[0].hostname="github.com" as "api.github.com";expect(()=>validateV2Deal(deal,"deal-1")).toThrow("source provenance");});
+  it("rejects a source assessment outside the canonical GitHub API host",()=>{const deal=fixture();deal.report=report();const source=deal.report.source_assessments[0];if(source.status!=="VERIFIED")throw new Error("fixture source must be verified");source.hostname="github.com" as "api.github.com";expect(()=>validateV2Deal(deal,"deal-1")).toThrow("source provenance");});
+  it("renders a timeout report without pretending unavailable sources were verified",()=>{const deal=fixture();const value=report();value.source_assessments=value.source_assessments.map((source)=>({artifact_id:source.artifact_id,status:"NOT_VERIFIED",commitment,reason_code:"ACCEPTANCE_TIMEOUT"}));deal.report=value;render(<V2Report deal={deal}/>);expect(screen.getByText("0/3 verified")).toBeInTheDocument();expect(screen.getAllByText("Not verified")).toHaveLength(3);expect(screen.getAllByText("Acceptance timeout")).toHaveLength(3);});
+  it("keeps the hosted agent path release-locked until a worker URL is configured",()=>{const deal=fixture();deal.status="FUNDED";render(<V2Worker deal={deal} account={deal.manifest.client as `0x${string}`}/>);expect(screen.getByText("RELEASE LOCKED")).toBeInTheDocument();expect(screen.getByRole("button",{name:/Start A\/B delivery/})).toBeDisabled();});
+  it("paginates the complete finalized deal list",async()=>{const ids=Array.from({length:55},(_,index)=>`deal-${index}`),spy=vi.spyOn(readClient,"readContract");spy.mockResolvedValueOnce(JSON.stringify({total:55,ids:ids.slice(0,50)})).mockResolvedValueOnce(JSON.stringify({total:55,ids:ids.slice(50)}));await expect(listV2Deals()).resolves.toEqual(ids);expect(spy).toHaveBeenCalledTimes(2);spy.mockRestore();});
+  it("fails closed if pagination total changes between finalized reads",async()=>{const spy=vi.spyOn(readClient,"readContract");spy.mockResolvedValueOnce(JSON.stringify({total:51,ids:Array.from({length:50},(_,index)=>`deal-${index}`)})).mockResolvedValueOnce(JSON.stringify({total:52,ids:["deal-50"]}));await expect(listV2Deals()).rejects.toThrow("changed while paging");spy.mockRestore();});
 });
