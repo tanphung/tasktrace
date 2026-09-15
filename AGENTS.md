@@ -27,8 +27,11 @@ Current Studio Next identity:
   `baedb9762690220aa8620fc6a94065b993700cbccb5ded586b4560ee3fc4019b`
 
 The contract already reached `FINALIZED + FINISHED_WITH_RETURN` with five
-validators. Do not redeploy it unless an actual contract change requires a new
-deployment and the user has reviewed and approved that deployment.
+validators. Do not redeploy it. On 2026-09-16 the user explicitly selected the
+existing-contract recovery path after reviewing the E2E tradeoff. Do not propose
+a contract rewrite or replacement Studio Next deployment as the default response
+to validator, GitHub, HTTP, timeout, or consensus instability. Preserve this
+deployment and finish through bounded, manifest-guarded recovery.
 
 ## Sources of truth
 

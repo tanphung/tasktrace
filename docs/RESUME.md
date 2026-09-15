@@ -2,6 +2,11 @@
 
 ## Safe stop trước khi người dùng nghỉ
 
+- Quyết định ngày 16/09/2026: người dùng chọn **kịch bản 1**. Giữ nguyên contract
+  Studio Next hiện tại; không sửa contract, không deploy lại và không chuyển sang
+  deployment mới để xử lý HTTP/consensus. Tiếp tục E2E bằng bounded recovery trên
+  deployment hiện tại, đúng thông báo mới nhất của team.
+
 - Đã dừng chủ động sau checkpoint live; không còn runner hoặc giao dịch đang ở
   `PENDING`, `ACCEPTED`, `PROPOSING` hay `COMMITTING`. Mọi hash trong manifest đã
   terminal và tuyệt đối không resend.
