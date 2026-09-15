@@ -1,5 +1,23 @@
 # Mốc tiếp tục VeriStep — cập nhật 15/09/2026
 
+## Safe stop trước khi người dùng nghỉ
+
+- Đã dừng chủ động sau checkpoint live; không còn runner hoặc giao dịch đang ở
+  `PENDING`, `ACCEPTED`, `PROPOSING` hay `COMMITTING`. Mọi hash trong manifest đã
+  terminal và tuyệt đối không resend.
+- `no-fault` đã pass semantic A/B và bốn settlement leg đều
+  `DISPATCHED_UNVERIFIED`. Đây là case hoàn tất, chỉ đọc lại khi tổng hợp report.
+- A-fault gốc, recovery r1/r2 và B-fault gốc vẫn on-chain ở
+  `REVIEW_REQUESTED`; các resolve/retry tương ứng đã terminal lỗi hoặc
+  `UNDETERMINED`, không phải giao dịch đang chờ. Không chạy lại các prefix cũ.
+- Khi người dùng nói **“tiếp tục”**: đọc manifest này, kiểm tra chain/deadline và
+  tình trạng validator trước. Sau khi cửa sổ cũ hết, xử lý timeout/unwind nếu cần;
+  chỉ tạo `a-fault` r3 và `b-fault` recovery-1 khi AI/consensus ổn định. Dùng
+  `VERISTEP_STUDIO_NEXT_CASES` để chạy riêng từng case, không chạy lại no-fault.
+- Sau live cases: tạo fee profile hợp nhất, dọn copy/script Bradbury khỏi luồng
+  active, hoàn thiện hosted worker (còn thiếu repo-scoped GitHub token), Vercel,
+  README và submission. Video vẫn do người dùng quay sau cùng.
+
 ## Checkpoint hiện hành — Studio Next Agent Tank
 
 Đây là checkpoint ưu tiên cao nhất. Mọi phần bên dưới chỉ là lịch sử nếu mâu
