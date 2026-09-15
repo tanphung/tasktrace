@@ -1,4 +1,4 @@
-# TaskTrace
+# VeriStep
 
 Accountability for two-stage work handoffs, with evidence-based adjudication on GenLayer.
 
@@ -6,19 +6,19 @@ Accountability for two-stage work handoffs, with evidence-based adjudication on 
 
 Intended Agent Tank hackathon track: **Future of Work**. The project is not an approved or submitted hackathon entry yet.
 
-Public demo: **https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15**
+Public demo: **https://veristep-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15**
 
 The production URL was verified on 9 September 2026 without signing in. It loaded the finalized Bradbury job, all four `SATISFIED` findings, and the exact `+0.03 GEN` recipient-payment evidence.
 
 ## V2 release candidate (StudioNet verified, not released)
 
-The next contract is implemented in `contracts/tasktrace_v2.py`; the production
+The next contract is implemented in `contracts/veristep.py`; the production
 site intentionally remains on the separately verified v1.1 deployment until the
 v2 release gate and fresh deployment approval are complete. V2 moves the entire
 settlement-affecting path into the Intelligent Contract: exact funded obligation
 IDs, independently refetched GitHub artifacts, whole-artifact SHA-256 and semantic
 review, structured reports, deterministic timeouts/entitlements, and exact router
-receipt confirmation. `contracts/TaskTraceReceiptRouter.sol` only executes and
+receipt confirmation. `contracts/VeriStepReceiptRouter.sol` only executes and
 records the IC-selected transfer; it cannot choose a verdict or recipient.
 
 Current gates: GenVM lint passes; 252 Python direct/adversarial regression tests
@@ -48,7 +48,7 @@ reserved under the conservative no-automatic-retry policy.
 
 ## The idea
 
-A client assigns an extraction task to worker/agent A, then a reporting task to worker/agent B. When a report is wrong, TaskTrace asks where the error entered the chain. B is not automatically penalized for faithfully passing on an upstream A error. A separate, optional duty makes B responsible for checking the original source too.
+A client assigns an extraction task to worker/agent A, then a reporting task to worker/agent B. When a report is wrong, VeriStep asks where the error entered the chain. B is not automatically penalized for faithfully passing on an upstream A error. A separate, optional duty makes B responsible for checking the original source too.
 
 The source document is the agreed reference, not proof of real-world truth. All three parties accept immutable terms. Complete small text artifacts and their hashes are stored on-chain; adjudication cites exact chunks and quotations. GenLayer validators independently assess the obligations. Fees, bonds, deadlines, recipients, and penalties are deterministic, not chosen by the LLM.
 
@@ -94,7 +94,7 @@ See [Bradbury receipts and manifest](reports/bradbury-release/) and the [verific
 - Chain: `61999` (StudioNet only).
 - Contract: `0x8128cD94346c94fe1FF20204d54a4B980Ae00b61`.
 - Deployed source SHA-256: `a5bc7d153af669d5a03dc4e68e89ed88159ad0d265f17c2064a1f07733235391`.
-- Contract version: `tasktrace-1.1`.
+- Contract version: `veristep-1.1`.
 - Live matrix: 16/16 cases passed; 113/113 integration steps finalized successfully; schema and config checks passed.
 - React/provider E2E job: `work-69d379f8`; seven lifecycle transactions finalized successfully; result `RESOLVED`, A/B both `SATISFIED`.
 
@@ -128,8 +128,8 @@ npm run dev
 uv venv --python 3.12 .venv
 uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 $env:GENVM_VERSION = 'v0.2.12'
-.venv/Scripts/genvm-lint.exe check contracts/tasktrace.py --json
-.venv/Scripts/genvm-lint.exe check contracts/tasktrace_v2.py --json
+.venv/Scripts/genvm-lint.exe check contracts/veristep.py --json
+.venv/Scripts/genvm-lint.exe check contracts/veristep.py --json
 .venv/Scripts/python.exe -m pytest tests/direct tests/adversarial -q
 npm run test:router
 ```
@@ -150,7 +150,7 @@ The committed report is a historical run, not reusable signing material. Resumin
 The React/provider live test is also explicit opt-in. It consumes StudioNet test GEN only when its persisted happy-path job is absent:
 
 ```powershell
-$env:TASKTRACE_LIVE_WALLET_TEST = 'studionet-only'
+$env:VERISTEP_LIVE_WALLET_TEST = 'studionet-only'
 npm run test:live-wallet
 ```
 
@@ -161,7 +161,7 @@ It signs with ignored, isolated StudioNet fixtures and exercises the real UI com
 The committed Bradbury report is resumable and will not resend a step whose hash is already recorded. A fresh deployment intentionally requires the exact confirmation value and the reviewed source hash:
 
 ```powershell
-$env:TASKTRACE_BRADBURY_CONFIRM = 'deploy-and-smoke-v1.1'
+$env:VERISTEP_BRADBURY_CONFIRM = 'deploy-and-smoke-v1.1'
 npm run release:bradbury
 ```
 
@@ -181,7 +181,7 @@ The Bradbury deployment was performed only after the required gates and the user
 
 ## Design and next work
 
-- [Detailed project plan (Vietnamese)](docs/KE-HOACH-TASKTRACE.md)
+- [Detailed project plan (Vietnamese)](docs/KE-HOACH-VERISTEP.md)
 - [Threat model](docs/THREAT-MODEL.md)
 - [Evidence schema](docs/EVIDENCE-SCHEMA.md)
 - [Full-artifact review](docs/FULL-ARTIFACT-REVIEW.md)

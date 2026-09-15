@@ -9,12 +9,12 @@ function assertHex(value:string,bytes:number,label:string){
 export function validateV2Deal(value:unknown,id:string):V2Deal{
   const deal=value as V2Deal;
   if(!deal||deal.deal_id!==id||String(deal.chain_id)!==evidenceChainId||deal.contract.toLowerCase()!==contract.toLowerCase())throw new Error("V2 contract evidence domain mismatch");
-  if(deal.manifest?.version!=="tasktrace-2.0-rc"||deal.manifest.deal_id!==id||deal.manifest.contract.toLowerCase()!==contract.toLowerCase()||deal.manifest.router.toLowerCase()!==deal.router.toLowerCase())throw new Error("V2 frozen manifest mismatch");
+  if(deal.manifest?.version!=="veristep-2.0-rc"||deal.manifest.deal_id!==id||deal.manifest.contract.toLowerCase()!==contract.toLowerCase()||deal.manifest.router.toLowerCase()!==deal.router.toLowerCase())throw new Error("V2 frozen manifest mismatch");
   assertHex(deal.terms_hash,32,"terms hash");
   const obligationIds=deal.manifest.obligations.map(item=>item.id);
   if(new Set(obligationIds).size!==obligationIds.length)throw new Error("Duplicate frozen obligation ID");
   if(deal.report){
-    if(deal.report.schema_version!=="tasktrace-report-2"||deal.report.job_id!==id||deal.report.contract.toLowerCase()!==contract.toLowerCase()||deal.report.terms_hash!==deal.terms_hash)throw new Error("V2 report identity mismatch");
+    if(deal.report.schema_version!=="veristep-report-2"||deal.report.job_id!==id||deal.report.contract.toLowerCase()!==contract.toLowerCase()||deal.report.terms_hash!==deal.terms_hash)throw new Error("V2 report identity mismatch");
     const assessed=deal.report.obligation_assessments.map(item=>item.obligation_id);
     if(assessed.length!==obligationIds.length||new Set(assessed).size!==assessed.length||assessed.some(item=>!obligationIds.includes(item)))throw new Error("V2 report does not cover the exact obligation set");
     const sourceIds=deal.report.source_assessments.map(item=>item.artifact_id);
@@ -23,7 +23,7 @@ export function validateV2Deal(value:unknown,id:string):V2Deal{
     const citationIds=new Set(deal.report.evidence_citations.map(item=>item.id));
     if(deal.report.obligation_assessments.some(item=>item.citation_ids.some(citation=>!citationIds.has(citation))))throw new Error("V2 report references a missing citation");
   }
-  if(deal.settlement_legs.some((leg,index)=>leg.sequence!==index||!/^([0-9a-f]{64})$/.test(leg.receipt_id)))throw new Error("V2 settlement receipt identity mismatch");
+  if(deal.settlement_legs.some((leg,index)=>leg.sequence!==index||!/^([0-9a-f]{64})$/.test(leg.receipt_id)||!["ELIGIBLE","DISPATCHED_UNVERIFIED"].includes(leg.state)))throw new Error("V2 settlement receipt identity mismatch");
   return deal;
 }
 

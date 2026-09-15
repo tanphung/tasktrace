@@ -2,8 +2,9 @@
 import copy
 import hashlib
 import json
-import sys
 import os
+from pathlib import Path
+import sys
 import tempfile
 import base64
 from types import SimpleNamespace
@@ -15,8 +16,10 @@ import pytest
 @pytest.fixture
 def core(direct_vm, direct_deploy, direct_alice, direct_owner):
     direct_vm.sender = direct_alice
-    contract = direct_deploy("contracts/tasktrace_v2.py", "0x" + direct_owner.hex(), sdk_version="v0.2.12")
-    return contract, sys.modules["_contract_tasktrace_v2"], direct_vm
+    source = os.environ.get("VERISTEP_V2_TEST_SOURCE", "contracts/veristep.py")
+    assert source in {"contracts/veristep.py", "contracts/veristep_release.py"}
+    contract = direct_deploy(source, "0x" + direct_owner.hex(), sdk_version="v0.6.0-rc5")
+    return contract, sys.modules[f"_contract_{Path(source).stem}"], direct_vm
 
 
 def origin():
@@ -58,12 +61,16 @@ def test_persist_exact_immutable_obligations(core):
     assert c.get_terms("work-1") == before
     capabilities = json.loads(c.get_capabilities())
     assert capabilities["funding"] is True and capabilities["external_review"] is True and capabilities["settlement"] is True
+    assert capabilities["version"] == "veristep-2.0-rc"
+    assert capabilities["status"] == "RELEASE_CANDIDATE"
+    assert capabilities["router"].startswith("0x") and len(capabilities["router"]) == 42
+    assert capabilities["router"].lower() == str(c.router).lower()
 
 
 def test_public_lifecycle_keeps_review_and_receipt_authority_in_contract(core, monkeypatch):
     c, m, vm = core
     vm.warp("2026-09-12T00:00:00+00:00")
-    m.gl.message_raw["datetime"] = "2026-09-12T00:00:00+00:00"
+    m.gl.message.raw["datetime"] = "2026-09-12T00:00:00+00:00"
     client = str(m.gl.message.sender_address)
     c.create_terms("work-1", json.dumps(terms()))
     deal = json.loads(c.get_terms("work-1"))
@@ -102,28 +109,29 @@ def test_public_lifecycle_keeps_review_and_receipt_authority_in_contract(core, m
     assert sum(int(leg["amount"]) for leg in deal["settlement_legs"]) == int(deal["ledger"]["received"]) == 30
 
     sends = []
-    monkeypatch.setattr(m, "_evm_send_exact", lambda router, calldata, amount: sends.append((str(router), calldata, amount)))
+    monkeypatch.setattr(
+        m.gl.chain.Account,
+        "emit_transfer",
+        lambda account, amount, on="finalized": sends.append(
+            (str(account.address), int(amount), on)
+        ),
+    )
     for original in list(deal["settlement_legs"]):
         c.route_settlement("work-1", original["id"])
         with pytest.raises(m.gl.vm.UserError, match="LEG_NOT_ELIGIBLE"):
             c.route_settlement("work-1", original["id"])
         routed = json.loads(c.get_terms("work-1"))
         leg = next(item for item in routed["settlement_legs"] if item["id"] == original["id"])
-        expected = m._receipt_expected(routed, leg, "RELEASED")
-        if original["sequence"] == 0:
-            monkeypatch.setattr(m, "_router_receipt_digest", lambda router, source_contract, receipt_id: "00" * 32)
-            with pytest.raises(m.gl.vm.UserError, match="RECEIPT_MISMATCH"):
-                c.confirm_settlement("work-1", original["id"])
-            unchanged = next(item for item in json.loads(c.get_terms("work-1"))["settlement_legs"] if item["id"] == original["id"])
-            assert unchanged["state"] == "ROUTED"
-        monkeypatch.setattr(m, "_router_receipt_digest", lambda router, source_contract, receipt_id, value=m._receipt_digest(expected): value)
-        c.confirm_settlement("work-1", original["id"])
-        with pytest.raises(m.gl.vm.UserError, match="LEG_NOT_ROUTED"):
+        assert leg["state"] == "DISPATCHED_UNVERIFIED"
+        with pytest.raises(m.gl.vm.UserError, match="STUDIO_NEXT_NATIVE_RECEIPT_UNVERIFIED"):
             c.confirm_settlement("work-1", original["id"])
-    completed = json.loads(c.get_terms("work-1"))
-    assert completed["status"] == "COMPLETED"
-    assert completed["ledger"] == {"received": "30", "routed": "30", "confirmed": "30"}
-    assert len(sends) == len(completed["settlement_legs"])
+    pending = json.loads(c.get_terms("work-1"))
+    assert pending["status"] == "SETTLEMENT_PENDING"
+    assert pending["ledger"] == {"received": "30", "routed": "30", "confirmed": "0"}
+    assert sends == [
+        (leg["recipient"], int(leg["amount"]), "finalized")
+        for leg in pending["settlement_legs"]
+    ]
 
 
 def test_funding_and_acceptance_require_exact_value_and_role(core):
@@ -143,7 +151,7 @@ def test_funding_and_acceptance_require_exact_value_and_role(core):
 def test_acceptance_timeout_refunds_only_value_actually_funded(core):
     c, m, vm = core
     vm.warp("2026-09-12T00:00:00+00:00")
-    m.gl.message_raw["datetime"] = "2026-09-12T00:00:00+00:00"
+    m.gl.message.raw["datetime"] = "2026-09-12T00:00:00+00:00"
     c.create_terms("work-1", json.dumps(terms()))
     deal = json.loads(c.get_terms("work-1"))
     vm.value = 20
@@ -157,7 +165,7 @@ def test_acceptance_timeout_refunds_only_value_actually_funded(core):
     deadline = json.loads(c.get_terms("work-1"))["accept_deadline"]
     iso = datetime.fromtimestamp(deadline, timezone.utc).isoformat()
     vm.warp(iso)
-    m.gl.message_raw["datetime"] = iso
+    m.gl.message.raw["datetime"] = iso
     c.advance_timeout("work-1")
     timed_out = json.loads(c.get_terms("work-1"))
     assert timed_out["status"] == "SETTLEMENT_PENDING"
@@ -171,7 +179,7 @@ def test_acceptance_timeout_refunds_only_value_actually_funded(core):
 def test_delivery_timeout_is_contract_determined_and_conserves_funds(core):
     c, m, vm = core
     vm.warp("2026-09-12T00:00:00+00:00")
-    m.gl.message_raw["datetime"] = "2026-09-12T00:00:00+00:00"
+    m.gl.message.raw["datetime"] = "2026-09-12T00:00:00+00:00"
     c.create_terms("work-1", json.dumps(terms()))
     deal = json.loads(c.get_terms("work-1"))
     vm.value = 20
@@ -184,7 +192,7 @@ def test_delivery_timeout_is_contract_determined_and_conserves_funds(core):
     active = json.loads(c.get_terms("work-1"))
     iso = datetime.fromtimestamp(active["a_deadline"], timezone.utc).isoformat()
     vm.warp(iso)
-    m.gl.message_raw["datetime"] = iso
+    m.gl.message.raw["datetime"] = iso
     c.advance_timeout("work-1")
     timed_out = json.loads(c.get_terms("work-1"))
     assert timed_out["report"]["decision"]["stages"]["A"]["outcome"] == "VIOLATED"
@@ -414,13 +422,12 @@ def test_exact_receipt_identity(core, field, value):
         m._receipt_matches(expected, actual)
 
 
-def test_receipt_digest_and_router_abi_match_solidity_reference(core):
+def test_legacy_receipt_identity_remains_stable_but_router_is_disabled(core):
     _, m, _ = core
     expected = receipt(m)
-    assert m._receipt_digest(expected) == "a594b2c908eb708fdc03f773c04ce85dd2bdec9c6e2598de822d53dc5da18850"
-    assert m._router_fund_calldata({**expected, "state": "FUNDED"})[:4].hex() == "6e4e63e1"
-    encoder = m.gl.evm.MethodEncoder("receiptDigest", (m.Address, m.gl.evm.bytes32), m.gl.evm.bytes32)
-    assert encoder.encode_call((m.Address(expected["source_contract"]), bytes.fromhex(expected["receipt_id"])))[:4].hex() == "86c40e4e"
+    assert m._receipt_digest(expected) == "bd0182020972ca9aaa828f784ac07f358885dadeb9b050d8ef72834e1e8ef8c8"
+    with pytest.raises(m.gl.vm.UserError, match="STUDIO_NEXT_EVM_RECEIPTS_UNAVAILABLE"):
+        m._router_fund_calldata({**expected, "state": "FUNDED"})
 
 
 @pytest.mark.parametrize("outcome,expected", [("SATISFIED", (10, 0, 5)), ("VIOLATED", (0, 13, 2)), ("UNASSESSABLE", (0, 10, 5))])
@@ -450,7 +457,7 @@ def test_validator_independently_acquires_and_sees_complete_tail(core, monkeypat
         return copy.deepcopy(artifacts)
     def prompt(text, **kwargs):
         prompts.append(text)
-        return {"supported": True} if "TASKTRACE_V2_GROUNDING" in text else copy.deepcopy(response)
+        return {"supported": True} if "VERISTEP_V2_GROUNDING" in text else copy.deepcopy(response)
     monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
     leader = m._wire_candidate(m._derive_semantics(obligations, acquire()))
     assert m._validate_semantic_leader(obligations, acquire, m.gl.vm.Return(leader))
@@ -521,7 +528,7 @@ def test_validator_retries_only_malformed_grounding_schema(core, monkeypatch):
     grounding_calls = []
 
     def prompt(text, **kwargs):
-        if "TASKTRACE_V2_GROUNDING" not in text:
+        if "VERISTEP_V2_GROUNDING" not in text:
             return copy.deepcopy(response)
         grounding_calls.append(text)
         return {} if len(grounding_calls) == 1 else {"supported": True}
@@ -539,7 +546,7 @@ def test_validator_never_rerolls_valid_grounding_rejection(core, monkeypatch):
     grounding_calls = []
 
     def prompt(text, **kwargs):
-        if "TASKTRACE_V2_GROUNDING" not in text:
+        if "VERISTEP_V2_GROUNDING" not in text:
             return copy.deepcopy(response)
         grounding_calls.append(text)
         return {"supported": False}
@@ -564,7 +571,7 @@ def test_validator_rejects_substantive_or_structural_disagreement(core, monkeypa
     if mode == "evidence_changed":
         _, artifacts, independent = candidate(m, b"Approval is never required.")
     def prompt(text, **kwargs):
-        if "TASKTRACE_V2_GROUNDING" in text:
+        if "VERISTEP_V2_GROUNDING" in text:
             return {"supported": "true" if mode == "grounding_truthy" else mode != "grounding"}
         return independent
     monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
@@ -601,62 +608,36 @@ def test_sdk_nondet_receives_both_callbacks_without_backend_authority(core, monk
         fetched.append(1)
         return artifacts
     def prompt(text, **kwargs):
-        return {"supported": True} if "TASKTRACE_V2_GROUNDING" in text else response
+        return {"supported": True} if "VERISTEP_V2_GROUNDING" in text else response
     def exercise_callbacks(leader, validator):
         value = leader()
         assert validator(m.gl.vm.Return(value))
         return value
     monkeypatch.setattr(m.gl.nondet, "exec_prompt", prompt)
     monkeypatch.setattr(m, "_acquire_all", acquire)
-    monkeypatch.setattr(m.gl.vm, "run_nondet_unsafe", exercise_callbacks)
+    monkeypatch.setattr(m.gl.vm, "run_nondet", exercise_callbacks)
     result = m._review_consensus(obligations, {role: artifacts[role]["commitment"] for role in m.ROLES})
     assert result["semantic"] == response
     assert set(result["artifacts"]) == set(m.ROLES)
     assert len(fetched) == 2
 
 
-def test_documented_wasi_send_preserves_exact_value_without_sdk_patch(core, monkeypatch):
+def test_v06_does_not_fall_back_to_legacy_evm_receipts(core):
     _, m, _ = core
-    captured = []
-    def syscall(payload):
-        captured.append(m.gen_calldata.decode(payload))
-        return 2**32 - 1
-    monkeypatch.setattr(m._genlayer_wasi, "gl_call", syscall)
-    target = m.Address("0x" + "44" * 20)
-    calldata = m.gl.evm.MethodEncoder("fund", (m.u256,), type(None)).encode_call((m.u256(7),))
-    m._evm_send_exact(target, calldata, 123)
-    assert captured == [{"EthSend": {"address": target, "calldata": calldata, "value": 123}}]
+    with pytest.raises(m.gl.vm.UserError, match="STUDIO_NEXT_EVM_RECEIPTS_UNAVAILABLE"):
+        m._evm_read_exact(m.Address("0x" + "44" * 20), b"abcd")
+    with pytest.raises(m.gl.vm.UserError, match="STUDIO_NEXT_EVM_SEND_UNAVAILABLE"):
+        m._evm_send_exact(m.Address("0x" + "44" * 20), b"abcd", 123)
 
 
-@pytest.mark.parametrize("length", [32, 4096, 4097])
-def test_documented_wasi_read_uses_correct_address_and_bounded_response(core, monkeypatch, length):
+def test_native_receipt_confirmation_fails_closed(core):
     _, m, _ = core
-    captured = []
-    target = m.Address("0x" + "44" * 20)
-    calldata = m.gl.evm.MethodEncoder("released", (m.u256,), m.u256).encode_call((m.u256(7),))
-    with tempfile.TemporaryFile() as payload_file:
-        payload_file.write(b"x" * length)
-        payload_file.seek(0)
-        def syscall(payload):
-            captured.append(m.gen_calldata.decode(payload))
-            return os.dup(payload_file.fileno())
-        monkeypatch.setattr(m._genlayer_wasi, "gl_call", syscall)
-        if length > 4096:
-            with pytest.raises(m.gl.vm.UserError, match="EVM_RESPONSE_SIZE"):
-                m._evm_read_exact(target, calldata)
-        else:
-            assert m._evm_read_exact(target, calldata) == b"x" * length
-    assert captured == [{"EthCall": {"address": target, "calldata": calldata}}]
-
-
-@pytest.mark.parametrize("amount", [0, -1, True, "123", 2 * 100 * 10**18 + 1])
-def test_evm_send_rejects_invalid_value_before_host_call(core, monkeypatch, amount):
-    _, m, _ = core
-    def unexpected_call(payload):
-        pytest.fail("invalid send reached host")
-    monkeypatch.setattr(m._genlayer_wasi, "gl_call", unexpected_call)
-    with pytest.raises(m.gl.vm.UserError, match="EVM_VALUE"):
-        m._evm_send_exact(m.Address("0x" + "44" * 20), b"abcd", amount)
+    with pytest.raises(m.gl.vm.UserError, match="STUDIO_NEXT_NATIVE_RECEIPT_UNVERIFIED"):
+        m._router_receipt_digest(
+            m.Address("0x" + "44" * 20),
+            "0x" + "55" * 20,
+            "66" * 32,
+        )
 
 
 def github_bundle():

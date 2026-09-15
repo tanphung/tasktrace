@@ -1,4 +1,4 @@
-# TaskTrace — Chiến lược đọc đủ artifact v0.2
+# VeriStep — Chiến lược đọc đủ artifact v0.2
 
 ## Release addendum — worker output boundary (13/09/2026)
 

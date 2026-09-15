@@ -1,4 +1,4 @@
-# TaskTrace v1.1 verification report
+# VeriStep v1.1 verification report
 
 Product-readiness update, 9 September: the historical technical results below remain valid for their recorded runs. The user requested a higher product-quality release; agent execution, general payment verification, comparative UX and visual redesign remain open under [the current release plan](COMPETITIVE-RELEASE-PLAN.md). Earlier statements that only portal submission remained are superseded.
 
@@ -10,13 +10,13 @@ Verified through 9 September 2026. This report describes a StudioNet test matrix
 - Bradbury contract: `0x3FC5dce3abadf149111A45ae9936eBdD7A67AA88`
 - Bradbury deployment transaction: `0xb98884870579ce28d933677f1fe1889f227c86c7b3c302c3c51aef9a1d7e44d2`
 - StudioNet matrix contract: `0x8128cD94346c94fe1FF20204d54a4B980Ae00b61` on chain `61999`
-- Contract version: `tasktrace-1.1`
+- Contract version: `veristep-1.1`
 - Source SHA-256: `a5bc7d153af669d5a03dc4e68e89ed88159ad0d265f17c2064a1f07733235391`
 - Raw integration evidence: `reports/studionet-sep07probe/`
 - Bradbury release evidence: `reports/bradbury-release/`
 - React/provider evidence: `reports/frontend-live/`
-- Public demo: `https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15`
-- Hosted source version: commit `d34f6cdf20dd53934871cc5912da7d653e6e9a7e` (Vercel project `vandas/tasktrace-genlayer`)
+- Public demo: `https://veristep-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15`
+- Hosted source version: commit `d34f6cdf20dd53934871cc5912da7d653e6e9a7e` (Vercel project `vandas/veristep-genlayer`)
 
 ## Offline and build gates
 

@@ -15,7 +15,7 @@ async function githubFetch(env: Pick<Env, "GITHUB_EVIDENCE_TOKEN">, path: string
       accept: "application/vnd.github+json",
       authorization: `Bearer ${env.GITHUB_EVIDENCE_TOKEN}`,
       "content-type": "application/json",
-      "user-agent": "TaskTrace-worker-v2",
+      "user-agent": "VeriStep-worker-v2",
       "x-github-api-version": "2022-11-28",
       ...(init.headers ?? {}),
     },
@@ -95,7 +95,7 @@ export async function publishArtifact(env: Env, runId: string, dealId: string, r
   const {origin, defaultBranch} = await repoOrigin(env);
   if (JSON.stringify(origin) !== JSON.stringify(expectedOrigin)) throw new Error(`Hosted evidence repository does not match frozen ${role} origin`);
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(dealId) || !/^[a-zA-Z0-9-]{1,64}$/.test(runId)) throw new Error("Unsafe immutable artifact path");
-  const branch = `tasktrace-${runId}`;
+  const branch = `veristep-${runId}`;
   const path = `jobs/${dealId}/${role.toLowerCase()}.md`;
   await ensureRunBranch(env, branch, defaultBranch);
   const bytes = utf8Bytes(content);
@@ -103,7 +103,7 @@ export async function publishArtifact(env: Env, runId: string, dealId: string, r
   let commit = "", blob = "";
   const put = await githubFetch(env, `/repos/${owner}/${repo}/contents/${encodedPath}`, {
     method: "PUT",
-    body: JSON.stringify({message: `TaskTrace ${dealId} agent ${role}`, content: encodeBase64(bytes), branch}),
+    body: JSON.stringify({message: `VeriStep ${dealId} agent ${role}`, content: encodeBase64(bytes), branch}),
   });
   if (put.ok) {
     const data = await put.json() as {commit?: {sha?: string}; content?: {sha?: string}};

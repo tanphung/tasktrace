@@ -1,8 +1,8 @@
-# TaskTrace v2 — Intelligent Contract architecture proposal
+# VeriStep v2 — Intelligent Contract architecture proposal
 
 12/09/2026 implementation update: this architecture now has a local release
-candidate in `contracts/tasktrace_v2.py` plus the minimal
-`contracts/TaskTraceReceiptRouter.sol`. Funding, immutable submissions,
+candidate in `contracts/veristep.py` plus the minimal
+`contracts/VeriStepReceiptRouter.sol`. Funding, immutable submissions,
 independent acquisition/review, complete structured reports, deterministic
 timeouts/entitlements, routing and exact released-receipt confirmation are public
 IC lifecycle methods. GenVM lint and all current component/regression suites pass.
@@ -33,7 +33,7 @@ This design implements the user's eight mandatory contract requirements and supe
 
 | Component | Authority |
 | --- | --- |
-| TaskTrace Intelligent Contract | Funded terms, exact obligations, evidence identity/provenance/full bytes, independent semantic review, report validation/storage, deadlines, revisions, credits, payout/refund eligibility and receipt confirmation |
+| VeriStep Intelligent Contract | Funded terms, exact obligations, evidence identity/provenance/full bytes, independent semantic review, report validation/storage, deadlines, revisions, credits, payout/refund eligibility and receipt confirmation |
 | Protocol-selected leader and validators | Execute contract-defined nondeterministic acquisition and assessment; validators independently refetch and derive results |
 | Pinned on-chain settlement router | Mechanically execute the IC's exact authorized transfer and retain immutable receipt fields; no AI, obligation evaluation or entitlement choice |
 | Worker agents | Produce and submit A/B artifacts under accepted permissions. Their output remains untrusted evidence |
@@ -194,9 +194,9 @@ Current payment-verification.json stays historical evidence for v1.1. It is not 
 
 Inspected v1.1 code and official docs. Re-ran existing source with GENVM_VERSION=v0.2.12:
 
-    .venv/Scripts/genvm-lint.exe check contracts/tasktrace.py --json
+    .venv/Scripts/genvm-lint.exe check contracts/veristep.py --json
 
-Result: ok=true; lint 3 passed; validation ok; TaskTrace 13 methods (4 view, 9 write). This says nothing about passing the NEW v2 requirements. No new tests or v2 code claimed and no deployment performed.
+Result: ok=true; lint 3 passed; validation ok; VeriStep 13 methods (4 view, 9 write). This says nothing about passing the NEW v2 requirements. No new tests or v2 code claimed and no deployment performed.
 
 Official references:
 - https://docs.genlayer.com/developers/intelligent-contracts/equivalence-principle

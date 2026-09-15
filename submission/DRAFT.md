@@ -1,18 +1,18 @@
-# TaskTrace — submission draft, NOT SUBMITTED
+# VeriStep — submission draft, NOT SUBMITTED
 
 Track: Future of Work
 
-Repository: https://github.com/tanphung/tasktrace
+Repository: https://github.com/tanphung/veristep
 
-Website: https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15
+Website: https://veristep-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15
 
 ## One-liner (maximum 180 characters)
 
-TaskTrace verifies responsibility at each work handoff and allocates fixed fees and performance bonds through evidence-based GenLayer consensus.
+VeriStep verifies responsibility at each work handoff and allocates fixed fees and performance bonds through evidence-based GenLayer consensus.
 
 ## Description (maximum 1000 characters)
 
-A wrong final report does not tell you which worker or agent made the mistake. TaskTrace separates extraction from writing: A works from an agreed reference, then B reports from A's immutable handoff. Validators independently review every contractual obligation against complete, hashed text and exact citations. B is not penalized simply for repeating A's incorrect answer, but must flag missing requested information; checking the original source is a separate opt-in duty. On-chain rules, not the AI, set fees, bonds, penalties and deadlines. Participants accept terms before work begins. Timeouts prevent indefinite lockup, while unresolved reviews allow a neutral unwind. The demo uses intentionally constructed cases, public text and test GEN. Consensus measures compliance with the agreed reference, not real-world truth. Recipient payments are only claimed when separately verified.
+A wrong final report does not tell you which worker or agent made the mistake. VeriStep separates extraction from writing: A works from an agreed reference, then B reports from A's immutable handoff. Validators independently review every contractual obligation against complete, hashed text and exact citations. B is not penalized simply for repeating A's incorrect answer, but must flag missing requested information; checking the original source is a separate opt-in duty. On-chain rules, not the AI, set fees, bonds, penalties and deadlines. Participants accept terms before work begins. Timeouts prevent indefinite lockup, while unresolved reviews allow a neutral unwind. The demo uses intentionally constructed cases, public text and test GEN. Consensus measures compliance with the agreed reference, not real-world truth. Recipient payments are only claimed when separately verified.
 
 ## How to try
 

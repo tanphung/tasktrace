@@ -3,83 +3,171 @@ import { createHash } from "node:crypto";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAccount, createClient, generatePrivateKey } from "genlayer-js";
-import { studionet } from "genlayer-js/chains";
+import { createAccount, createClient, deriveInternalMessageCallKey, encodeInternalMessageFeeParams } from "genlayer-js";
+import { studioDevnet } from "genlayer-js/chains";
 import { assertExecution, executionName, statusName } from "./receipts.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const reportName = process.env.TASKTRACE_STUDIONET_REPORT ?? "v2-studionet-semantic";
-assert.match(reportName, /^v2-studionet-[a-z0-9-]{1,48}$/, "Unsafe StudioNet report directory name");
+const reportName = process.env.VERISTEP_STUDIO_NEXT_REPORT ?? "studio-next-live";
+assert.match(reportName, /^studio-next-[a-z0-9-]{1,48}$/, "Unsafe Studio Next report directory name");
 const reportDir = resolve(root, "reports", reportName);
 const manifestPath = resolve(reportDir, "manifest.json");
-const secretsPath = resolve(root, ".secrets", "v2-studionet-semantic.json");
-const evidenceCommit = "f4b48b235d15c0be61cbd75bf491dde1b98ad058";
+const secretsPath = resolve(root, ".secrets", "studio-next-wallets.json");
+const evidenceCommit = "358323c1c33d667e0599f330554fb5f5fad6406d";
+assert.match(evidenceCommit, /^[0-9a-f]{40}$/, "Immutable evidence commit unavailable");
 const owner = "tanphung";
-const repository = "tasktrace";
-const routerDisabled = "0x000000000000000000000000000000000000dEaD";
+const repository = "veristep-evidence";
+const rpc = "https://studio-next.genlayer.com/api";
+const chain = { ...studioDevnet, name: "GenLayer Studio Next", rpcUrls: { default: { http: [rpc] } } };
 const origin = {
   provider: "github",
   hostname: "api.github.com",
   owner,
   owner_id: 162718327,
   repository,
-  repository_id: 1358380732,
+  repository_id: 1368396966,
 };
+const INTERNAL_TRANSFER_BUDGET = 120000000000010352n;
+const internalTransferAllocation = (recipient) => ({
+  messageType: 1,
+  onAcceptance: false,
+  recipient,
+  callKey: deriveInternalMessageCallKey(),
+  budget: INTERNAL_TRANSFER_BUDGET,
+  feeParams: encodeInternalMessageFeeParams({
+    leaderTimeunitsAllocation: 100n,
+    validatorTimeunitsAllocation: 200n,
+    appealRounds: 0n,
+    executionBudgetPerRound: 25000000000000000n,
+    rotations: [3n],
+    maxPriceGenPerTimeUnit: 2n,
+    storageFeeMaxGasPrice: 300000000n,
+    receiptFeeMaxGasPrice: 300000000n,
+  }),
+});
 const fixtures = [
   {
-    id: "happy",
+    id: "no-fault",
     paths: {
-      SOURCE: "evidence/v2-smoke/source.txt",
-      A: "evidence/v2-smoke/worker-a.txt",
-      B: "evidence/v2-smoke/worker-b.txt",
+      SOURCE: "fixtures/no-fault/source.txt",
+      A: "fixtures/no-fault/agent-a.txt",
+      B: "fixtures/no-fault/agent-b.txt",
     },
     expected: { A: "SATISFIED", B: "SATISFIED" },
   },
   {
-    id: "tail-contradiction",
+    id: "a-fault",
     paths: {
-      SOURCE: "evidence/v2-adversarial/source.txt",
-      A: "evidence/v2-adversarial/worker-a-tail-contradiction.txt",
-      B: "evidence/v2-adversarial/worker-b-faithful.txt",
+      SOURCE: "fixtures/a-fault/source.txt",
+      A: "fixtures/a-fault/agent-a.txt",
+      B: "fixtures/a-fault/agent-b.txt",
     },
     expected: { A: "VIOLATED", B: "SATISFIED" },
+  },
+  {
+    id: "b-fault",
+    paths: {
+      SOURCE: "fixtures/b-fault/source.txt",
+      A: "fixtures/b-fault/agent-a.txt",
+      B: "fixtures/b-fault/agent-b.txt",
+    },
+    expected: { A: "SATISFIED", B: "VIOLATED" },
   },
 ];
 const exists = (path) => access(path).then(() => true, () => false);
 const stringify = (value) => JSON.stringify(value, (_, item) => typeof item === "bigint" ? item.toString() : item, 2);
 const sleep = (milliseconds) => new Promise((done) => setTimeout(done, milliseconds));
+function isTransientNetworkError(error) {
+  const message = [error?.details, error?.shortMessage, error?.message, error?.cause?.message]
+    .filter(Boolean)
+    .join(" ");
+  return /fetch failed|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|network/i.test(message);
+}
+
+async function rpcReadWithRetry(label, action, attempts = 5) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await action();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientNetworkError(error) || attempt === attempts) throw error;
+      console.warn(JSON.stringify({ retry: label, attempt, reason: error?.details ?? error?.message }));
+      await sleep(1000 * attempt);
+    }
+  }
+  throw lastError;
+}
+
+async function submitWithNonceGuard(name, client, submit) {
+  const address = client.account?.address;
+  assert.match(address ?? "", /^0x[0-9a-fA-F]{40}$/, `${name} signer unavailable`);
+  const nonceBefore = await rpcReadWithRetry(`${name}:nonce-before`, () => client.getTransactionCount({
+    address,
+    blockTag: "pending",
+  }));
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await submit();
+    } catch (error) {
+      if (!isTransientNetworkError(error)) throw error;
+      await sleep(1500 * attempt);
+      const nonceAfter = await rpcReadWithRetry(`${name}:nonce-after`, () => client.getTransactionCount({
+        address,
+        blockTag: "pending",
+      }));
+      if (nonceAfter !== nonceBefore) {
+        throw new Error(
+          `${name} submission is uncertain: signer nonce advanced from ${nonceBefore} to ${nonceAfter}; refusing to resend without a transaction hash`,
+          { cause: error },
+        );
+      }
+      if (attempt === 3) throw error;
+      console.warn(JSON.stringify({ retry: `${name}:submit`, attempt, nonce: nonceBefore.toString() }));
+    }
+  }
+  throw new Error(`${name} submission retry exhausted`);
+}
 
 await mkdir(reportDir, { recursive: true });
-await mkdir(dirname(secretsPath), { recursive: true });
-if (!await exists(secretsPath)) {
-  await writeFile(secretsPath, stringify({
-    client: generatePrivateKey(),
-    A: generatePrivateKey(),
-    B: generatePrivateKey(),
-  }), { mode: 0o600, flag: "wx" });
-}
-const keys = JSON.parse(await readFile(secretsPath, "utf8"));
+assert.equal(await exists(secretsPath), true, "Hosted worker keys are missing; run prepare-worker-secrets first");
+const workerKeys = JSON.parse(await readFile(secretsPath, "utf8"));
+const keys = { client: workerKeys.CLIENT_PRIVATE_KEY, A: workerKeys.WORKER_A_PRIVATE_KEY, B: workerKeys.WORKER_B_PRIVATE_KEY };
+for (const [role, key] of Object.entries(keys)) assert.match(key ?? "", /^0x[0-9a-fA-F]{64}$/, `${role} private key is invalid`);
 const accounts = Object.fromEntries(Object.entries(keys).map(([role, key]) => [role, createAccount(key)]));
-const clients = Object.fromEntries(Object.entries(accounts).map(([role, account]) => [role, createClient({ chain: studionet, account })]));
+assert.notEqual(accounts.A.address.toLowerCase(), accounts.B.address.toLowerCase(), "Worker wallets must be distinct");
+const clients = Object.fromEntries(Object.entries(accounts).map(([role, account]) => [role, createClient({ chain, endpoint: rpc, account })]));
 const chainId = await clients.client.getChainId();
-assert.equal(chainId, 61999, "StudioNet chain guard failed");
-const code = await readFile(resolve(root, "contracts", "tasktrace_v2.py"), "utf8");
+assert.equal(chainId, 61997, "Studio Next chain guard failed");
+const balances = {};
+for (const role of ["client", "A", "B"]) {
+  let balance = await clients[role].getBalance({ address: accounts[role].address });
+  if (balance < 5n * 10n ** 18n) {
+    await clients.client.request({ method: "sim_fundAccount", params: [accounts[role].address, 1e20] });
+    balance = await clients[role].getBalance({ address: accounts[role].address });
+  }
+  assert.ok(balance >= 5n * 10n ** 18n, `${role} Studio Next balance is insufficient`);
+  balances[role] = String(balance);
+}
+const contractSource = "veristep_release.py";
+const code = await readFile(resolve(root, "contracts", contractSource), "utf8");
 const sourceHash = createHash("sha256").update(code).digest("hex");
 let manifest = await exists(manifestPath)
   ? JSON.parse(await readFile(manifestPath, "utf8"))
   : {
-      version: "tasktrace-v2-studionet-semantic-1",
-      network: "studionet",
+      version: "veristep-studio-next-live-1",
+      network: "studio-next",
       chainId,
       sourceHash,
       evidenceCommit,
       wallets: Object.fromEntries(Object.entries(accounts).map(([role, account]) => [role, account.address])),
+      preflightBalances: balances,
       steps: {},
       cases: {},
       startedAt: new Date().toISOString(),
-      limitations: ["Semantic consensus only: the intentionally disabled router prevents this run from claiming settlement."],
+      limitations: ["Studio Next native transfer receipts are observed off-chain; contract-side receipt confirmation remains fail-closed."],
     };
-assert.equal(manifest.network, "studionet");
+assert.equal(manifest.network, "studio-next");
 assert.equal(manifest.chainId, chainId);
 assert.equal(manifest.sourceHash, sourceHash, "Contract changed; archive the saved StudioNet run before retrying");
 assert.equal(manifest.evidenceCommit, evidenceCommit, "Evidence commit changed during a saved run");
@@ -128,7 +216,7 @@ async function transaction(name, client, submit) {
     await save();
     let hash;
     try {
-      hash = await submit();
+      hash = await submitWithNonceGuard(name, client, submit);
     } catch (error) {
       Object.assign(step, {
         phase: "REJECTED_BEFORE_HASH",
@@ -147,26 +235,34 @@ async function transaction(name, client, submit) {
   let receipt;
   for (let attempt = 0; attempt < 240; attempt += 1) {
     await sleep(5000);
-    receipt = await client.getTransaction({ hash: step.hash });
+    receipt = await rpcReadWithRetry(`${name}:receipt`, () => client.getTransaction({ hash: step.hash }));
     await writeFile(resolve(reportDir, `${name}.receipt.json`), stringify(receipt));
     const lifecycle = statusName(receipt);
     if (attempt % 6 === 0 || ["FINALIZED", "UNDETERMINED", "CANCELED", "LEADER_TIMEOUT", "VALIDATORS_TIMEOUT"].includes(lifecycle)) {
       console.log(JSON.stringify({ step: name, status: lifecycle, execution: executionName(receipt) }));
     }
     if (["UNDETERMINED", "CANCELED", "LEADER_TIMEOUT", "VALIDATORS_TIMEOUT"].includes(lifecycle)) {
+      Object.assign(step, {
+        finalized: true,
+        phase: lifecycle,
+        execution: executionName(receipt),
+        finishedAt: new Date().toISOString(),
+      });
+      await save();
       throw new Error(`${name} reached terminal ${lifecycle}`);
     }
     if (lifecycle === "FINALIZED") break;
   }
-  assertExecution(receipt ?? {}, true);
+  const execution = executionName(receipt ?? {});
   Object.assign(step, {
     finalized: true,
-    phase: "FINALIZED_SUCCESS",
-    execution: executionName(receipt),
+    phase: execution === "FINISHED_WITH_RETURN" ? "FINALIZED_SUCCESS" : "FINALIZED_ERROR",
+    execution,
     to: receipt.to_address ?? receipt.recipient ?? receipt.data?.contract_address,
     finishedAt: new Date().toISOString(),
   });
   await save();
+  assertExecution(receipt ?? {}, true);
   return step;
 }
 
@@ -179,7 +275,7 @@ async function expectedRejection(name, client, expectedError, submit) {
       startedAt: new Date().toISOString(),
     };
     await save();
-    const hash = await submit();
+    const hash = await submitWithNonceGuard(name, client, submit);
     Object.assign(step, { hash, phase: "PENDING_EXPECTED_REJECTION", submittedAt: new Date().toISOString() });
     await save();
     console.log(JSON.stringify({ step: name, submitted: hash, expectedError }));
@@ -193,7 +289,7 @@ async function expectedRejection(name, client, expectedError, submit) {
   let receipt;
   for (let attempt = 0; attempt < 240; attempt += 1) {
     await sleep(5000);
-    receipt = await client.getTransaction({ hash: step.hash });
+    receipt = await rpcReadWithRetry(`${name}:receipt`, () => client.getTransaction({ hash: step.hash }));
     await writeFile(resolve(reportDir, `${name}.receipt.json`), stringify(receipt));
     const lifecycle = statusName(receipt);
     if (attempt % 6 === 0 || ["FINALIZED", "UNDETERMINED", "CANCELED", "LEADER_TIMEOUT", "VALIDATORS_TIMEOUT"].includes(lifecycle)) {
@@ -219,7 +315,7 @@ async function expectedRejection(name, client, expectedError, submit) {
 
 const githubHeaders = {
   accept: "application/vnd.github+json",
-  "user-agent": "TaskTrace-v2-studionet",
+  "user-agent": "VeriStep-v2-studionet",
   ...(process.env.GH_TOKEN ? { authorization: `Bearer ${process.env.GH_TOKEN}` } : {}),
 };
 const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repository}`, { headers: githubHeaders });
@@ -266,44 +362,59 @@ function makeTerms(commitments) {
   };
 }
 
-const deployment = await transaction("deploy", clients.client, () => clients.client.deployContract({
-  code,
-  args: [routerDisabled],
-  leaderOnly: false,
-  consensusMaxRotations: 3,
-}));
-manifest.contract ??= deployment.to;
-assert.match(manifest.contract ?? "", /^0x[0-9a-fA-F]{40}$/, "V2 deployment address missing");
+const deployment = JSON.parse(await readFile(resolve(root, "frontend", "src", "deployment.json"), "utf8"));
+assert.equal(deployment.network, "studio-next");
+assert.equal(deployment.chainId, 61997);
+assert.equal(deployment.sourceHash, sourceHash, "Frontend deployment source hash is stale");
+assert.ok(["LIVE_GATES_PENDING","READY"].includes(deployment.releaseStatus), "Frontend deployment status is invalid");
+manifest.contract ??= deployment.contract;
+assert.match(manifest.contract ?? "", /^0x[0-9a-fA-F]{40}$/, "Studio Next deployment address missing");
 await save();
 const address = manifest.contract;
+const deployedCode = await clients.client.getContractCode(address);
+assert.equal(createHash("sha256").update(deployedCode).digest("hex"), sourceHash, "Deployed source hash mismatch");
 const schema = await clients.client.getContractSchema(address);
 await writeFile(resolve(reportDir, "schema.json"), stringify(schema));
 const config = JSON.parse(await clients.client.readContract({ address, functionName: "get_capabilities", args: [] }));
-assert.equal(config.version, "tasktrace-2.0-rc");
-assert.equal(config.router.toLowerCase(), routerDisabled.toLowerCase());
+assert.equal(config.version, "veristep-2.0-rc");
+assert.equal(config.router.toLowerCase(), accounts.client.address.toLowerCase());
 manifest.schemaVerified = true;
 manifest.configVerified = true;
+manifest.deployedSourceVerified = true;
 await save();
 const readDeal = async (dealId) => JSON.parse(await clients.client.readContract({ address, functionName: "get_terms", args: [dealId] }));
-const write = (name, role, functionName, args, value = 0n) => transaction(name, clients[role], () => clients[role].writeContract({
-  address,
-  functionName,
-  args,
-  value,
-  leaderOnly: false,
-  consensusMaxRotations: 3,
-}));
+const write = (name, role, functionName, args, value = 0n, feeOptions = {}) => transaction(name, clients[role], async () => {
+  const call = { address, functionName, args, value };
+  const estimate = await clients[role].estimateTransactionFeesForWrite({ ...call, ...feeOptions });
+  manifest.feeProfiles ??= {};
+  manifest.feeProfiles[name] = {
+    feeValue: String(estimate.feeValue),
+    distribution: JSON.parse(stringify(estimate.distribution)),
+    ...(estimate.messageAllocations ? { messageAllocations: JSON.parse(stringify(estimate.messageAllocations)) } : {}),
+  };
+  await save();
+  return clients[role].writeContract({
+    ...call,
+    fees: {
+      distribution: estimate.distribution,
+      ...(estimate.messageAllocations ? { messageAllocations: estimate.messageAllocations } : {}),
+      feeValue: estimate.feeValue,
+    },
+  });
+});
 
 async function loadCommitments(paths) {
   const commitments = {};
   for (const [role, path] of Object.entries(paths)) {
-    const bytes = await readFile(resolve(root, path));
     const entry = tree.tree.find((item) => item.path === path);
-    assert.deepEqual(
-      { type: entry?.type, mode: entry?.mode, size: entry?.size },
-      { type: "blob", mode: "100644", size: bytes.length },
-      `${role} tree entry mismatch`,
-    );
+    assert.equal(entry?.type,"blob",`${role} tree entry missing`);
+    assert.equal(entry?.mode,"100644",`${role} tree mode mismatch`);
+    const blobResponse=await fetch(`https://api.github.com/repos/${owner}/${repository}/git/blobs/${entry.sha}`,{headers:githubHeaders});
+    assert.equal(blobResponse.status,200,`${role} blob unavailable`);
+    const blob=await blobResponse.json();
+    assert.equal(blob.encoding,"base64",`${role} blob encoding mismatch`);
+    const bytes=Buffer.from(blob.content.replace(/\s/g,""),"base64");
+    assert.equal(entry.size,bytes.length,`${role} blob size mismatch`);
     commitments[role] = {
       origin,
       commit: evidenceCommit,
@@ -320,8 +431,18 @@ async function loadCommitments(paths) {
 
 for (const fixture of fixtures) {
   const commitments = await loadCommitments(fixture.paths);
-  const dealId = `v2-studio-${fixture.id}-${evidenceCommit.slice(0, 7)}`;
-  const prefix = fixture.id;
+  let recovery = 0;
+  while (true) {
+    const candidate = recovery === 0 ? fixture.id : `${fixture.id}-recovery-${recovery}`;
+    const failedResolve = manifest.steps[`${candidate}-resolve-review`];
+    const rejectedRetry = manifest.steps[`${candidate}-resolve-review-retry-1`];
+    if (!(failedResolve?.phase === "FINALIZED_ERROR" && rejectedRetry?.phase === "REJECTED_BEFORE_HASH")) break;
+    recovery += 1;
+  }
+  const prefix = recovery === 0 ? fixture.id : `${fixture.id}-recovery-${recovery}`;
+  const dealId = recovery === 0
+    ? `v2-studio-${fixture.id}-${evidenceCommit.slice(0, 7)}`
+    : `v2-studio-${fixture.id}-r${recovery}-${evidenceCommit.slice(0, 7)}`;
   await write(`${prefix}-create`, "client", "create_terms", [dealId, JSON.stringify(makeTerms(commitments))]);
   let deal = await readDeal(dealId);
   assert.equal(deal.deal_id, dealId);
@@ -333,7 +454,10 @@ for (const fixture of fixtures) {
   deal = await readDeal(dealId);
   await write(`${prefix}-submit-b`, "B", "submit_artifact", [dealId, JSON.stringify(commitments.B), deal.artifacts.A.submission_id]);
   await write(`${prefix}-request-review`, "client", "request_review", [dealId]);
-  await write(`${prefix}-resolve-review`, "client", "resolve_review", [dealId]);
+  const resolveBase = `${prefix}-resolve-review`;
+  const priorResolve = manifest.steps[resolveBase];
+  const resolveName = priorResolve?.finalized && ["UNDETERMINED","FINALIZED_ERROR"].includes(priorResolve.phase) ? `${resolveBase}-retry-1` : resolveBase;
+  await write(resolveName, "client", "resolve_review", [dealId]);
   deal = await readDeal(dealId);
   assert.equal(deal.status, "SETTLEMENT_PENDING", `${fixture.id} did not reach a deterministic settlement decision`);
   const semantic = Object.fromEntries(
@@ -346,14 +470,27 @@ for (const fixture of fixtures) {
   assert.deepEqual(deal.report.obligation_assessments.map((item) => item.obligation_id).sort(), expectedIds, `${fixture.id} report obligation set mismatch`);
   assert.equal(deal.report.source_assessments.length, 3);
   assert.ok(deal.report.evidence_citations.length >= 4, `${fixture.id} report citations missing`);
+  const settlementDispatch = [];
+  for (const leg of deal.settlement_legs) {
+    const routeBase = `${prefix}-route-${leg.id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const prior = manifest.steps[routeBase];
+    const routeName = prior?.finalized && prior.execution === "FINISHED_WITH_ERROR" ? `${routeBase}-allocated` : routeBase;
+    await write(routeName, "client", "route_settlement", [dealId, leg.id], 0n, {
+      messageAllocations: [internalTransferAllocation(leg.recipient)],
+    });
+    deal = await readDeal(dealId);
+    const routedLeg = deal.settlement_legs.find((item) => item.id === leg.id);
+    assert.equal(routedLeg?.state, "DISPATCHED_UNVERIFIED", `${fixture.id}/${leg.id} was not dispatched`);
+    settlementDispatch.push({ id: leg.id, kind: leg.kind, recipient: leg.recipient, amount: leg.amount, state: routedLeg.state, transaction: manifest.steps[routeName].hash });
+  }
   await writeFile(resolve(reportDir, `${fixture.id}.deal.json`), stringify(deal));
-  manifest.cases[fixture.id] = { dealId, expected: fixture.expected, actual: semantic, status: deal.status, passed: true };
+  manifest.cases[fixture.id] = { dealId, expected: fixture.expected, actual: semantic, status: deal.status, settlementDispatch, passed: true };
   await save();
   console.log(JSON.stringify({ case: fixture.id, passed: true, semantic, status: deal.status }));
 }
 
 const validCommitments = await loadCommitments(fixtures[0].paths);
-const negativeCases = [
+const negativeCases = process.env.VERISTEP_LIVE_NEGATIVE === "1" ? [
   {
     id: "bad-hostname",
     expectedError: "ORIGIN_HOST",
@@ -390,7 +527,7 @@ const negativeCases = [
       value.semantic_obligations = value.semantic_obligations.slice(0, 1);
     },
   },
-];
+] : [];
 
 for (const testCase of negativeCases) {
   const dealId = `v2-studio-reject-${testCase.id}-${evidenceCommit.slice(0, 7)}`;

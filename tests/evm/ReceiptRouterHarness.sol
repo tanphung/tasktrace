@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.37;
 
-interface ITaskTraceReceiptRouter {
+interface IVeriStepReceiptRouter {
     function release(address sourceContract, bytes32 receiptId) external;
 }
 
 contract RejectingReceiptRecipient {
     function trigger(address router, address sourceContract, bytes32 receiptId) external {
-        ITaskTraceReceiptRouter(router).release(sourceContract, receiptId);
+        IVeriStepReceiptRouter(router).release(sourceContract, receiptId);
     }
 
     receive() external payable {
@@ -25,10 +25,10 @@ contract ReenteringReceiptRecipient {
         router = target;
         sourceContract = source;
         receiptId = id;
-        ITaskTraceReceiptRouter(target).release(source, id);
+        IVeriStepReceiptRouter(target).release(source, id);
     }
 
     receive() external payable {
-        (reentered,) = router.call(abi.encodeCall(ITaskTraceReceiptRouter.release, (sourceContract, receiptId)));
+        (reentered,) = router.call(abi.encodeCall(IVeriStepReceiptRouter.release, (sourceContract, receiptId)));
     }
 }

@@ -63,15 +63,15 @@ export interface RunParams {
 
 export interface Env {
   DB: D1Database;
-  TASKTRACE_RUNNER: Workflow<RunParams>;
+  VERISTEP_RUNNER: Workflow<RunParams>;
   OPENAI_API_KEY: string;
   OPENAI_WORKER_MODEL: string;
   WORKER_A_PRIVATE_KEY: `0x${string}`;
   WORKER_B_PRIVATE_KEY: `0x${string}`;
   GITHUB_EVIDENCE_TOKEN: string;
   GENLAYER_RPC_URL: string;
-  TASKTRACE_CHAIN_ID: string;
-  TASKTRACE_V2_CONTRACT: `0x${string}`;
+  VERISTEP_CHAIN_ID: string;
+  VERISTEP_V2_CONTRACT: `0x${string}`;
   EVIDENCE_GITHUB_OWNER: string;
   EVIDENCE_GITHUB_REPOSITORY: string;
   ALLOWED_ORIGIN: string;

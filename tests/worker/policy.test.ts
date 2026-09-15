@@ -3,13 +3,13 @@ import {actualCostNanoUsd, BUILD_BUDGET_NANO_USD, buildAgentPrompt, canonicalAut
 import type {WorkerDeal} from "../../worker/src/types";
 
 function deal(): WorkerDeal {
-  const origin = {provider: "github" as const, hostname: "api.github.com" as const, owner: "tanphung", owner_id: 1, repository: "tasktrace-evidence", repository_id: 2};
+  const origin = {provider: "github" as const, hostname: "api.github.com" as const, owner: "tanphung", owner_id: 1, repository: "veristep-evidence", repository_id: 2};
   const commitment = {origin, commit: "1".repeat(40), path: "source.md", blob: "2".repeat(40), content_type: "text/markdown" as const, encoding: "utf-8" as const, byte_length: 6, sha256: "3".repeat(64)};
   return {
     deal_id: "demo-job", chain_id: 4221, contract: `0x${"4".repeat(40)}`, status: "ACTIVE_A", terms_hash: "5".repeat(64), accepted: {A: true, B: true},
     manifest: {client: `0x${"6".repeat(40)}`, terms: {workers: {A: `0x${"7".repeat(40)}`, B: `0x${"8".repeat(40)}`}, origins: {SOURCE: origin, A: origin, B: origin}, money: {A: {fee: "1", bond: "1", penalty: "1"}, B: {fee: "1", bond: "1", penalty: "1"}}, semantic_obligations: [
-      {id: "A-EXTRACT", stage: "A", statement: "Extract every material term", evidence_ids: ["SOURCE"]},
-      {id: "B-REPORT", stage: "B", statement: "Write a faithful report", evidence_ids: ["A"]},
+      {id: "A-EXTRACT", stage: "A", statement: "Extract every material term", evidence_ids: ["SOURCE", "A"]},
+      {id: "B-REPORT", stage: "B", statement: "Write a faithful report", evidence_ids: ["A", "B"]},
     ]}},
     artifacts: {SOURCE: {submission_id: "source-id", upstream_submission_id: "", commitment}},
   };
@@ -17,7 +17,7 @@ function deal(): WorkerDeal {
 
 describe("worker policy", () => {
   it("enforces the approved total cap and conservative integer pricing", () => {
-    expect(BUILD_BUDGET_NANO_USD).toBe(800_000_000);
+    expect(BUILD_BUDGET_NANO_USD).toBe(1_200_000_000);
     expect(estimateMaxInputTokens("é")).toBe(2);
     expect(worstCaseCostNanoUsd("abc", 10)).toBe(831_800);
     expect(actualCostNanoUsd(100, 20)).toBe(44_000);
@@ -33,6 +33,11 @@ describe("worker policy", () => {
 
   it("requires B to consume the finalized A handoff", () => {
     expect(() => buildAgentPrompt(deal(), "B", {})).toThrow("Required A artifact");
+    expect(buildAgentPrompt(deal(), "B", {A: "Finalized A output"})).toContain("Finalized A output");
+  });
+
+  it("does not require the role's not-yet-generated output as prompt input", () => {
+    expect(buildAgentPrompt(deal(), "A", {SOURCE: "Complete source"})).toContain("Complete source");
     expect(buildAgentPrompt(deal(), "B", {A: "Finalized A output"})).toContain("Finalized A output");
   });
 

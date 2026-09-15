@@ -30,7 +30,7 @@ async function acceptRole(step: WorkflowStep, env: Env, params: RunParams, role:
   await waitFinal(step, env, params, role, "accept_work", hash);
 }
 
-export class TaskTraceWorkflow extends WorkflowEntrypoint<Env, RunParams> {
+export class VeriStepWorkflow extends WorkflowEntrypoint<Env, RunParams> {
   async run(event: Readonly<WorkflowEvent<RunParams>>, step: WorkflowStep): Promise<unknown> {
     const params = event.payload;
     try {

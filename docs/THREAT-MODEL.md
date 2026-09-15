@@ -1,4 +1,4 @@
-# TaskTrace — Threat model v0.2
+# VeriStep — Threat model v0.2
 
 ## Release addendum — receipt namespace and hosted workers (13/09/2026)
 

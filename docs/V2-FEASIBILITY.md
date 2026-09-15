@@ -2,7 +2,7 @@
 
 12 September status: this file is historical preflight evidence. The selected
 WASI adapter, full IC lifecycle and receipt router are now implemented in
-`contracts/tasktrace_v2.py` and `contracts/TaskTraceReceiptRouter.sol`; component
+`contracts/veristep.py` and `contracts/VeriStepReceiptRouter.sol`; component
 gates pass as recorded in [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). The remaining
 gate is native full-environment integration, not the three original SDK probes.
 No v2 public deployment is claimed.
@@ -42,7 +42,7 @@ genvm-linter 0.11.0, genlayer-py 0.16.3, pytest 9.0.3.
 
 ```
 $env:GENVM_VERSION='v0.2.12'
-.\.venv\Scripts\genvm-lint.exe check contracts/tasktrace.py --json
+.\.venv\Scripts\genvm-lint.exe check contracts/veristep.py --json
 .\.venv\Scripts\pytest.exe -q --tb=short --junitxml=reports/v2-preflight.xml
 ```
 

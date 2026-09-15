@@ -43,7 +43,7 @@ async def main():
     await server.setup()
     await web.TCPSite(server, "127.0.0.1", http_port).start()
     module = probe = None
-    with tempfile.TemporaryDirectory(prefix="tasktrace-web-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="veristep-web-") as temporary:
         temp = Path(temporary)
         config = yaml.safe_load((args.runtime / "config/genvm-module-web.yaml").read_text())
         config.update(bind_address=f"127.0.0.1:{module_port}", always_allow_hosts=["localhost", "127.0.0.1"], signer_url="http://127.0.0.1:1")
@@ -76,7 +76,7 @@ async def main():
                 assert probe.returncode == 0, report
                 assert requests == [{"host": f"127.0.0.1:{http_port}", "path": "/start"}, {"host": f"localhost:{http_port}", "path": "/final"}], report
                 native = json.loads((root / "reports/v2-native-web.json").read_text())
-                line = next(line for line in native["stdout"].splitlines() if line.startswith("TASKTRACE_NATIVE_WEB_RESPONSE="))
+                line = next(line for line in native["stdout"].splitlines() if line.startswith("VERISTEP_NATIVE_WEB_RESPONSE="))
                 response = json.loads(line.split("=", 1)[1])
                 assert response["status"] == 200 and not response["has_url"] and not response["has_history"], response
                 assert json.loads(response["body"])["fixture"] == "redirected-artifact", response

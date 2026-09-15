@@ -1,4 +1,4 @@
-# TaskTrace — Evidence schema v0.2
+# VeriStep — Evidence schema v0.2
 
 ## Release addendum — receipt lookup and worker provenance (13/09/2026)
 
@@ -15,7 +15,7 @@ V2 stores the complete funded obligation manifest, including deterministic dutie
 
 ## Addendum v0.4 — version-bound coverage policy
 
-New jobs bind `tasktrace-1.1` in immutable terms. Existing IDs and response schema remain unchanged; the A_COVERAGE/B_COVERAGE descriptions now require explicit answers or explicit unknowns. Timing alone cannot answer an independent prerequisite. Both derivation and grounding receive the same policy. This changes the rubric version, not artifact bytes, hash/chunk validation, money rules, or existing deployment state.
+New jobs bind `veristep-1.1` in immutable terms. Existing IDs and response schema remain unchanged; the A_COVERAGE/B_COVERAGE descriptions now require explicit answers or explicit unknowns. Timing alone cannot answer an independent prerequisite. Both derivation and grounding receive the same policy. This changes the rubric version, not artifact bytes, hash/chunk validation, money rules, or existing deployment state.
 
 ## Addendum v0.3 — schema thực thi cho regression citation
 

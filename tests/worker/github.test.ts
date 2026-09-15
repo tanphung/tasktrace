@@ -6,7 +6,7 @@ import type {Commitment, Env} from "../../worker/src/types";
 const content = "Full artifact opening.\nFinal contradiction remains visible.";
 const bytes = Buffer.from(content);
 const blob = createHash("sha1").update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`), bytes])).digest("hex");
-const origin = {provider: "github" as const, hostname: "api.github.com" as const, owner: "tanphung", owner_id: 10, repository: "tasktrace-evidence", repository_id: 20};
+const origin = {provider: "github" as const, hostname: "api.github.com" as const, owner: "tanphung", owner_id: 10, repository: "veristep-evidence", repository_id: 20};
 const commitment: Commitment = {origin, commit: "a".repeat(40), path: "source.md", blob, content_type: "text/markdown", encoding: "utf-8", byte_length: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex")};
 const env = {GITHUB_EVIDENCE_TOKEN: "test"} as Env;
 

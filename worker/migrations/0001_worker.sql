@@ -2,14 +2,14 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS openai_budget (
   id INTEGER PRIMARY KEY CHECK (id = 1),
-  limit_nano_usd INTEGER NOT NULL CHECK (limit_nano_usd = 800000000),
+  limit_nano_usd INTEGER NOT NULL CHECK (limit_nano_usd = 1200000000),
   spent_nano_usd INTEGER NOT NULL DEFAULT 0 CHECK (spent_nano_usd >= 0),
   reserved_nano_usd INTEGER NOT NULL DEFAULT 0 CHECK (reserved_nano_usd >= 0),
   updated_at INTEGER NOT NULL,
   CHECK (spent_nano_usd + reserved_nano_usd <= limit_nano_usd)
 );
 INSERT OR IGNORE INTO openai_budget(id, limit_nano_usd, spent_nano_usd, reserved_nano_usd, updated_at)
-VALUES (1, 800000000, 0, 0, unixepoch());
+VALUES (1, 1200000000, 0, 0, unixepoch());
 
 CREATE TABLE IF NOT EXISTS openai_reservations (
   request_id TEXT PRIMARY KEY,

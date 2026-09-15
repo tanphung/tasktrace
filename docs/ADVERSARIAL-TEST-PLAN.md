@@ -1,4 +1,4 @@
-# TaskTrace — Kế hoạch kiểm thử đối kháng v0.2
+# VeriStep — Kế hoạch kiểm thử đối kháng v0.2
 
 ## Release addendum — receipt preemption and hosted worker cases (13/09/2026)
 

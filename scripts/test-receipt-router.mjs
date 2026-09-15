@@ -4,7 +4,7 @@ import { artifacts, network, solidity } from "hardhat";
 import { encodePacked, getContract, sha256 } from "viem";
 
 const buildResult = await solidity.build([
-  fileURLToPath(new URL("../contracts/TaskTraceReceiptRouter.sol", import.meta.url)),
+  fileURLToPath(new URL("../contracts/VeriStepReceiptRouter.sol", import.meta.url)),
   fileURLToPath(new URL("../tests/evm/ReceiptRouterHarness.sol", import.meta.url)),
 ], { force: true, quiet: true, cleanupArtifacts: true });
 assert.ok(solidity.isSuccessfulBuildResult(buildResult), "Solidity build failed");
@@ -12,7 +12,7 @@ const { viem } = await network.create();
 const publicClient = await viem.getPublicClient();
 const wallets = await viem.getWalletClients();
 const [source, recipient, outsider] = wallets;
-const compiled = await artifacts.readArtifact("TaskTraceReceiptRouter");
+const compiled = await artifacts.readArtifact("VeriStepReceiptRouter");
 async function deploy(name) {
   const artifact = await artifacts.readArtifact(name);
   const hash = await source.deployContract({ abi: artifact.abi, bytecode: artifact.bytecode });
@@ -20,7 +20,7 @@ async function deploy(name) {
   assert.ok(receipt.contractAddress);
   return getContract({ address: receipt.contractAddress, abi: artifact.abi, client: { public: publicClient, wallet: source } });
 }
-const router = await deploy("TaskTraceReceiptRouter");
+const router = await deploy("VeriStepReceiptRouter");
 
 const receiptId = `0x${"11".repeat(32)}`;
 const dealHash = `0x${"22".repeat(32)}`;
@@ -41,7 +41,7 @@ assert.equal(await publicClient.getBalance({ address: router.address }), amount 
 
 const fundedDigest = sha256(encodePacked(
   ["string", "bytes1", "uint256", "address", "address", "bytes32", "uint8", "uint32", "bytes32", "bytes32", "bytes32", "address", "uint256", "uint8", "uint8"],
-  ["TASKTRACE_RECEIPT_V2", "0x00", await publicClient.getChainId(), router.address, source.account.address, dealHash, 1, 7, termsHash, decisionHash, receiptId, recipient.account.address, amount, 1, 1],
+  ["VERISTEP_RECEIPT_V2", "0x00", await publicClient.getChainId(), router.address, source.account.address, dealHash, 1, 7, termsHash, decisionHash, receiptId, recipient.account.address, amount, 1, 1],
 ));
 assert.equal(await router.read.receiptDigest([source.account.address, receiptId]), fundedDigest);
 
@@ -57,7 +57,7 @@ assert.equal(await publicClient.getBalance({ address: router.address }), 1n);
 
 const releasedDigest = sha256(encodePacked(
   ["string", "bytes1", "uint256", "address", "address", "bytes32", "uint8", "uint32", "bytes32", "bytes32", "bytes32", "address", "uint256", "uint8", "uint8"],
-  ["TASKTRACE_RECEIPT_V2", "0x00", await publicClient.getChainId(), router.address, source.account.address, dealHash, 1, 7, termsHash, decisionHash, receiptId, recipient.account.address, amount, 1, 2],
+  ["VERISTEP_RECEIPT_V2", "0x00", await publicClient.getChainId(), router.address, source.account.address, dealHash, 1, 7, termsHash, decisionHash, receiptId, recipient.account.address, amount, 1, 2],
 ));
 assert.equal(await router.read.receiptDigest([source.account.address, receiptId]), releasedDigest);
 await assert.rejects(recipientRouter.write.release([source.account.address, receiptId]));

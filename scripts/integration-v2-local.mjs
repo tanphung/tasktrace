@@ -20,11 +20,11 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const reportDir = resolve(root, "reports", "v2-local");
 const manifestPath = resolve(reportDir, "manifest.json");
 const secretsPath = resolve(root, ".secrets", "v2-local.json");
-const genEndpoint = process.env.TASKTRACE_GEN_RPC ?? "http://127.0.0.1:4000/api";
-const evmEndpoint = process.env.TASKTRACE_EVM_RPC ?? "http://127.0.0.1:8545";
+const genEndpoint = process.env.VERISTEP_GEN_RPC ?? "http://127.0.0.1:4000/api";
+const evmEndpoint = process.env.VERISTEP_EVM_RPC ?? "http://127.0.0.1:8545";
 const commitSha = "926821c5c48c6c91fc7f11d3c5d654f1180f3e87";
 const owner = "tanphung";
-const repository = "tasktrace";
+const repository = "veristep";
 const origin = {
   provider: "github",
   hostname: "api.github.com",
@@ -43,7 +43,7 @@ const stringify = (value) => JSON.stringify(value, (_, item) => typeof item === 
 const save = () => writeFile(manifestPath, stringify(manifest));
 const githubHeaders = {
   accept: "application/vnd.github+json",
-  "user-agent": "TaskTrace-v2-integration",
+  "user-agent": "VeriStep-v2-integration",
   ...(process.env.GH_TOKEN ? { authorization: `Bearer ${process.env.GH_TOKEN}` } : {}),
 };
 
@@ -74,12 +74,12 @@ const chainId = Number.parseInt(await rpc(genEndpoint, "eth_chainId"), 16);
 assert.equal(Number.parseInt(await rpc(evmEndpoint, "eth_chainId"), 16), chainId, "GenLayer and EVM chain domains differ");
 const genChain = { ...localnet, id: chainId, rpcUrls: { default: { http: [genEndpoint] } } };
 const clients = Object.fromEntries(Object.entries(accounts).map(([role, account]) => [role, createClient({ chain: genChain, endpoint: genEndpoint, account })]));
-const code = await readFile(resolve(root, "contracts", "tasktrace_v2.py"), "utf8");
+const code = await readFile(resolve(root, "contracts", "veristep.py"), "utf8");
 const sourceHash = createHash("sha256").update(code).digest("hex");
 let manifest = await exists(manifestPath)
   ? JSON.parse(await readFile(manifestPath, "utf8"))
   : {
-      version: "tasktrace-v2-local-1",
+      version: "veristep-v2-local-1",
       chainId,
       sourceHash,
       commitSha,
@@ -150,7 +150,7 @@ for (const role of ["client", "A", "B"]) {
 
 const evmChain = defineChain({
   id: chainId,
-  name: "TaskTrace isolated local EVM",
+  name: "VeriStep isolated local EVM",
   nativeCurrency: { name: "GEN", symbol: "GEN", decimals: 18 },
   rpcUrls: { default: { http: [evmEndpoint] } },
 });
@@ -178,10 +178,10 @@ for (const role of ["client", "A", "B"]) {
 }
 
 const buildResult = await solidity.build([
-  fileURLToPath(new URL("../contracts/TaskTraceReceiptRouter.sol", import.meta.url)),
+  fileURLToPath(new URL("../contracts/VeriStepReceiptRouter.sol", import.meta.url)),
 ], { force: true, quiet: true, cleanupArtifacts: true });
 assert.ok(solidity.isSuccessfulBuildResult(buildResult), "Receipt router compile failed");
-const routerArtifact = await artifacts.readArtifact("TaskTraceReceiptRouter");
+const routerArtifact = await artifacts.readArtifact("VeriStepReceiptRouter");
 if (!manifest.router) {
   let step = manifest.steps["deploy-router"];
   if (!step) {

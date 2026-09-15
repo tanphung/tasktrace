@@ -1,4 +1,4 @@
-# TaskTrace — rà soát cạnh tranh và kế hoạch hoàn thiện
+# VeriStep — rà soát cạnh tranh và kế hoạch hoàn thiện
 
 > Kế hoạch thực hiện hiện hành từ 13/09/2026: [RELEASE-COMPLETION-PLAN.md](RELEASE-COMPLETION-PLAN.md). Tài liệu mới hợp nhất phần còn thiếu của IC V2, worker OpenAI được hosting, UX, kiểm thử và hồ sơ; thay thế lịch R0–R5 bên dưới. Video và việc nộp do người dùng tự thực hiện. Những phân tích cũ dưới đây giữ làm lịch sử, không phải trạng thái release hiện tại.
 
@@ -10,14 +10,14 @@ Tài liệu này thay thế các thứ tự thực hiện và tuyên bố “ch�
 
 ## 1. Kết luận và nguồn kiểm tra
 
-TaskTrace có nền tảng thử nghiệm kỹ thuật hữu ích nhưng chưa đủ bằng chứng để gọi là một bài dự thi cạnh tranh cao. Trở ngại lớn nhất là khác biệt chưa hiển thị rõ trong sản phẩm, chưa có worker agent thực thi, và trải nghiệm job mới chưa hoàn chỉnh như bản demo đã chuẩn bị. Thêm ảnh hero và animation không đóng được các khoảng trống này.
+VeriStep có nền tảng thử nghiệm kỹ thuật hữu ích nhưng chưa đủ bằng chứng để gọi là một bài dự thi cạnh tranh cao. Trở ngại lớn nhất là khác biệt chưa hiển thị rõ trong sản phẩm, chưa có worker agent thực thi, và trải nghiệm job mới chưa hoàn chỉnh như bản demo đã chuẩn bị. Thêm ảnh hero và animation không đóng được các khoảng trống này.
 
 - Explorer hiển thị 46 dự án thuộc Agent Tank lúc kiểm tra. Đây không phải tổng số đơn đăng ký và không phải số dự án được duyệt cuối cùng: https://portal.genlayer.foundation/builders/explorer/?category=agent-tank
 - Tiêu chuẩn người dùng đặt ra: hoàn thiện như một bài cần vượt qua mức tuyển chọn chỉ khoảng 5%. Đây là mức yêu cầu chất lượng cho dự án; không tiếp tục tranh luận về nguồn/tỷ lệ. Luật và lịch chiến dịch tham chiếu: https://portal.genlayer.foundation/agent-tank/hackathon/
 - Hạn trang luật hiển thị: 17/09 lúc 15:30 UTC (22:30 UTC+7). Mục tiêu nội bộ bàn giao ngày 15/09 để người dùng tự nộp và còn thời gian xử lý lỗi.
 - Các mô tả đối thủ dưới đây do dự án tự khai trên portal; chưa kiểm toán code/giao dịch của họ. Cả ba trang hiện hiển thị IN REVIEW. Rating cộng đồng không được coi là điểm panel.
 
-| Dự án | Điều đã đọc/quan sát | Hệ quả cho TaskTrace |
+| Dự án | Điều đã đọc/quan sát | Hệ quả cho VeriStep |
 | --- | --- | --- |
 | FirstFault | Research → Writer → Publisher; xác định vi phạm vật chất đầu tiên, bằng chứng liên kết, settlement; có demo video và website hoạt động. Trang khai StudioNet, contract đóng băng. | Không quảng cáo “tìm bước gây lỗi” là ý tưởng độc nhất. |
 | CausalBond | Nghĩa vụ ban đầu truyền qua mandate có chữ ký và bond; xác định cạnh đánh rơi nghĩa vụ. Trang khai bằng chứng runtime StudioNet. | “Có bond và xác định trách nhiệm” cũng chưa đủ khác biệt. |
@@ -48,7 +48,7 @@ Các vị trí đối chiếu: frontend/src/App.tsx, Actions.tsx, client.ts, pay
 
 ## 3. Định vị duy nhất xuyên suốt bản tiếp theo
 
-Track vẫn là Future of Work. Tên vẫn là TaskTrace. Một khách hàng, một agent trích xuất A, một agent viết B; dữ liệu là tài liệu văn bản nhỏ do các bên thống nhất.
+Track vẫn là Future of Work. Tên vẫn là VeriStep. Một khách hàng, một agent trích xuất A, một agent viết B; dữ liệu là tài liệu văn bản nhỏ do các bên thống nhất.
 
 Giá trị cần thể hiện: với báo cáo sai, kiểm tra từng nghĩa vụ đã chấp nhận để phân biệt lỗi đầu vào được truyền tiếp và lỗi mới do người viết tạo ra; thanh toán theo nghĩa vụ và số tiền đã khóa trước. Không khẳng định suy ra mọi nguyên nhân thực tế hoặc chỉ phạt duy nhất bước đầu tiên. Nếu hai bên vi phạm độc lập, cả hai có thể bị xử lý.
 
@@ -58,14 +58,14 @@ Không mở rộng thành marketplace, workflow DAG tổng quát, đa chain, tok
 
 ## 4. Kiến trúc nhất quán
 
-- Contract tasktrace-1.1 tiếp tục là nguồn quyết định nghĩa vụ, trạng thái, kết quả và tiền. Freeze source/hash hiện tại trong các bước UI và agent.
+- Contract veristep-1.1 tiếp tục là nguồn quyết định nghĩa vụ, trạng thái, kết quả và tiền. Freeze source/hash hiện tại trong các bước UI và agent.
 - Một adapter đọc/verifier dùng chung cho workspace, compare, receipt view và WebMCP. Manifest demo chỉ lưu metadata/ID và link chứng cứ; không ghi đè state live.
 - Một cơ chế route phân biệt trang, job, tab và vị trí citation. Anchor cuộn không được thay job hoặc kích hoạt transaction.
 - Một transaction layer dùng chung cho mọi write. Ghi intent/hash, resume đúng hash, kiểm tra sender/chain/contract/method/execution/post-state; không tự ký lại khi trạng thái broadcast chưa rõ.
 - Agent runner chạy local/server riêng của operator với hai ví A/B, policy theo job và ngân sách. Website Vercel là frontend public; không đưa funded key hoặc model credential vào frontend.
 - Client chấp nhận ngân sách/điều khoản trước khi chạy. A chỉ nhận source+task; B chỉ nhận upstream+task trừ khi nghĩa vụ kiểm tra nguồn yêu cầu thêm source. Log lưu input/output/model ID/hash/thời gian, không lưu bí mật hoặc giả reasoning nội bộ.
 - Worker inference là phụ thuộc mới, tách khỏi inference của validators. Phải chọn provider và xác minh credential/runtime hợp lệ ở gate đầu. Nếu chưa có, không quảng cáo agent tự sinh nội dung và không tự coi fixture runner là agent.
-- Primary hosting: Vercel tasktrace-genlayer. Sites cũ là lịch sử; không tự publish đổi audience hay xóa site trong bước lập kế hoạch.
+- Primary hosting: Vercel veristep-genlayer. Sites cũ là lịch sử; không tự publish đổi audience hay xóa site trong bước lập kế hoạch.
 - Mọi thay đổi source contract nếu thực sự bắt buộc phải trở thành một quyết định riêng: cập nhật 4 design docs, phiên bản mới, test đầy đủ và giữ nguyên receipts cũ. Không trộn manifest giữa hai contract.
 
 ## 5. Tính năng bắt buộc và điều kiện nghiệm thu
@@ -114,7 +114,7 @@ Direction: nền ivory/sáng, chữ xanh đen, cobalt cho primary action; sideba
 - Tokens chung cho color/spacing/type/radius; component CSS có scope. Hợp nhất styles.css/workspace.css/redesign.css có chủ đích, không tiếp tục chồng override.
 - Animation ưu tiên thể hiện handoff đang chọn, mở finding, highlight citation và trạng thái pending thật. Decorative motion ngắn, nhẹ; có pause nếu vòng lặp dài, reduced-motion tắt, không giả live review/vote.
 - Mục tiêu đo: hero tối đa khoảng 300 KB nếu chất lượng cho phép; màn đọc không tải sẵn toàn bộ wallet SDK; test mobile production LCP mục tiêu ≤2.5 giây theo điều kiện đo được công bố. Đây là mục tiêu chưa đạt, không phải số đo hiện tại.
-- QA viewport 390/768/1280/1440, keyboard/focus, giảm chuyển động, loading/error/empty/long text. So sánh cùng viewport, không lấy desktop ClauseFlow đối chiếu mobile TaskTrace rồi suy ra ưu thế.
+- QA viewport 390/768/1280/1440, keyboard/focus, giảm chuyển động, loading/error/empty/long text. So sánh cùng viewport, không lấy desktop ClauseFlow đối chiếu mobile VeriStep rồi suy ra ưu thế.
 
 ## 7. Trình tự thực hiện và gate chống xung đột
 
@@ -152,6 +152,6 @@ Schema và adapters trước → components → browser QA → hồ sơ. Thay đ
 
 Local preview: http://127.0.0.1:5174/#job=bradbury-happy-a5bc7d15
 
-Production hiện tại: https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15 (bản cũ; redesign chưa publish).
+Production hiện tại: https://veristep-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15 (bản cũ; redesign chưa publish).
 
 Ở lượt lập kế hoạch này chỉ đọc/đánh giá, mở preview, chạy npm test/build và ghi kế hoạch. Không gửi giao dịch mới, không deploy thêm, không sửa code chức năng từ các phát hiện trên. R0 là công việc tiếp theo; mọi mục chưa tick vẫn là chưa hoàn thành.

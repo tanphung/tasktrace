@@ -1,9 +1,53 @@
-# Mốc tiếp tục TaskTrace — cập nhật 13/09/2026
+# Mốc tiếp tục VeriStep — cập nhật 15/09/2026
+
+## Checkpoint hiện hành — Studio Next Agent Tank
+
+Đây là checkpoint ưu tiên cao nhất. Mọi phần bên dưới chỉ là lịch sử nếu mâu
+thuẫn. Không dùng Bradbury nữa và không redeploy contract hiện tại nếu source
+không đổi.
+
+- Studio Next chain `61997`; contract
+  `0xd72A7C7e1e9c1A56AE32B827b756fFff031B1b4b`; deploy transaction
+  `0x6200be8f09bb10d670ac7c3a1def9ba11893bc618ae4d4b2d261ffd2ab39494b`;
+  source SHA-256
+  `baedb9762690220aa8620fc6a94065b993700cbccb5ded586b4560ee3fc4019b`.
+- `.venv` đã tạo lại đúng repo. GenVM lint hai source V2 đạt và Python suite
+  đạt `245 passed`. Test harness có adapter RC2 cho regression SDK V1; contract
+  V2 không bị sửa bởi adapter này.
+- Frontend + receipt đạt `77 + 2`, worker đạt `16`, typecheck, production build,
+  worker build, Wrangler dry-run, secret scan và dependency audit đều đạt.
+- Bốn ví Studio Next đã khác nhau, faucet thành công và đủ số dư. Không in hoặc
+  commit private key.
+- Cloudflare Worker đã tồn tại tại
+  `https://veristep-agent-worker.veristep.workers.dev`. D1 migrations đã áp dụng;
+  budget hiện là limit `1,200,000,000`, spent `172,200`, reserved `1,374,200`,
+  remaining `1,198,453,600` nano-USD. Health còn `ready=false` vì thiếu duy nhất
+  secret `GITHUB_EVIDENCE_TOKEN`; không redeploy trùng trước khi kiểm tra state.
+- Manifest live là `reports/studio-next-agent-tank/manifest.json`. Case
+  `no-fault` đã đạt A/B `SATISFIED`, bốn leg ở đúng trạng thái
+  `DISPATCHED_UNVERIFIED`; không gửi lại bất kỳ step nào của case này.
+- Case `a-fault` gốc đã final đến request review; resolve
+  `0x878e79c309a1485fab7dbb284fd159d7ae5de5424867fe6f5ed6c4f84c715bfa`
+  lỗi do `HTTP_UNAVAILABLE`/`MAJORITY_DISAGREE`, retry hết cửa sổ và không có
+  hash. Giữ nguyên bằng chứng lỗi.
+- Recovery deal `v2-studio-a-fault-r1-358323c` đã đạt `FINALIZED_SUCCESS` cho
+  create, fund, accept A/B, submit A/B và request review. Estimate resolve bị
+  từ chối trước hash với `CITATION_NOT_UNIQUE`; không retry mù. Điểm tiếp tục là
+  chẩn đoán consensus/citation của recovery deal hoặc chờ timeout an toàn, rồi
+  chạy `b-fault` lần đầu. Runner chọn prefix recovery mới từ manifest và không
+  chạy lại step đã final.
+- Video và thao tác Portal do người dùng tự thực hiện sau khi dApp hoàn chỉnh.
+
+Thứ tự còn lại: hoàn thiện hosted worker secret/health và một hosted A/B case;
+hoàn tất ba case Studio Next từ checkpoint; hợp nhất fee profile; sửa copy/UI
+Bradbury còn sót; publish Vercel; cập nhật README/submission. Trước mọi write
+live, đọc manifest và quan sát hash hiện có; không tự resend trạng thái
+`UNKNOWN`, ambiguous hoặc đã finalized.
 
 ## Trạng thái hiện hành — v2 release candidate, chưa deploy
 
-Source hiện tại là `contracts/tasktrace_v2.py` và
-`contracts/TaskTraceReceiptRouter.sol`; file draft `tasktrace_v2_core.py` đã được
+Source hiện tại là `contracts/veristep.py` và
+`contracts/VeriStepReceiptRouter.sol`; file draft `veristep_core.py` đã được
 thay thế. IC đã có trọn lifecycle funding → accept → immutable GitHub commitment
 → independent consensus review → structured report → deterministic settlement
 → exact released-receipt confirmation. Lint đạt; v2 direct 157/157, toàn bộ Python
@@ -32,7 +76,7 @@ thuẫn.
 
 ## Tiến độ mới nhất — đã code lõi v2, chưa phải dApp v2 hoàn chỉnh
 
-Đọc [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). Đã có `contracts/tasktrace_v2_core.py`, 144 direct tests và toàn bộ 239 Python regression đạt; lint không warning. Adapter EVM WASI đã chạy trong binary GenVM v0.2.12 thực với controlled host, giữ đúng target/value; chưa phải router/finality/chain E2E. Probe web module chính thức đã chứng minh redirect cross-host bị tự follow và IC chỉ thấy final 200/body, không URL/history; vì vậy external acquisition vẫn đóng. Report assembler IC đã bind provenance đầy đủ và tách deterministic obligation A/B. Frontend đạt 2 receipt + 65 UI tests, build/typecheck sạch và bundle lớn nhất còn 285.22 kB; desktop/mobile đã kiểm tra trực quan. Chưa bật funding hoặc settlement, không dùng ví/deploy trong bước này.
+Đọc [V2-CORE-PROGRESS.md](V2-CORE-PROGRESS.md). Đã có `contracts/veristep_core.py`, 144 direct tests và toàn bộ 239 Python regression đạt; lint không warning. Adapter EVM WASI đã chạy trong binary GenVM v0.2.12 thực với controlled host, giữ đúng target/value; chưa phải router/finality/chain E2E. Probe web module chính thức đã chứng minh redirect cross-host bị tự follow và IC chỉ thấy final 200/body, không URL/history; vì vậy external acquisition vẫn đóng. Report assembler IC đã bind provenance đầy đủ và tách deterministic obligation A/B. Frontend đạt 2 receipt + 65 UI tests, build/typecheck sạch và bundle lớn nhất còn 285.22 kB; desktop/mobile đã kiểm tra trực quan. Chưa bật funding hoặc settlement, không dùng ví/deploy trong bước này.
 
 ## Mốc mới nhất — v2 preflight bị chặn, chưa deploy
 
@@ -48,7 +92,7 @@ Preview local đang ở cổng 5174; production Vercel vẫn là bản trước 
 
 ## Mốc public cuối cùng — 09/09/2026
 
-- Demo chính đã deploy production trên Vercel từ commit `d34f6cdf20dd53934871cc5912da7d653e6e9a7e`: `https://tasktrace-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15`.
+- Demo chính đã deploy production trên Vercel từ commit `d34f6cdf20dd53934871cc5912da7d653e6e9a7e`: `https://veristep-genlayer.vercel.app/#job=bradbury-happy-a5bc7d15`.
 - Đã kiểm tra lại alias Vercel trong trình duyệt: không cần đăng nhập; job Bradbury tải ở trạng thái `RESOLVED`, bốn finding đều `SATISFIED`, và payout A hiển thị `Recipient transfer verified` với chênh lệch chính xác `+0.03 GEN`.
 - GitHub `main` chứa toàn bộ source, test, raw evidence Bradbury và tài liệu bàn giao public; commit cuối phải qua secret guard trước khi push.
 - Việc còn lại duy nhất không tự động hóa: người dùng kiểm tra hồ sơ, xác nhận GitHub liên kết portal, kết nối ví của mình, chấp nhận điều khoản và tự nộp bài.
@@ -77,7 +121,7 @@ Preview local đang ở cổng 5174; production Vercel vẫn là bản trước 
 
 ## Mốc mới nhất — đọc phần này trước lịch sử bên dưới
 
-Người dùng đã yêu cầu tiếp tục xây dựng. Repo public đã có tại https://github.com/tanphung/tasktrace, baseline trước phiên này là `ca63b99`. Không còn ở trạng thái tạm dừng ngày 05/09.
+Người dùng đã yêu cầu tiếp tục xây dựng. Repo public đã có tại https://github.com/tanphung/veristep, baseline trước phiên này là `ca63b99`. Không còn ở trạng thái tạm dừng ngày 05/09.
 
 - Contract sửa định dạng prompt và cho phép đúng một lần tạo lại output sai schema; không reroll verdict hợp lệ, không bỏ kiểm tra citation hay validator độc lập. Bốn tài liệu thiết kế đã có addendum trước sửa code.
 - GenVM lint đạt; 81 direct/adversarial tests đạt (mock LLM). `npm test`: 50 frontend + 2 receipt tests đạt. TypeScript/Vite build đạt, còn cảnh báo bundle 755 kB.
@@ -98,8 +142,8 @@ Người dùng yêu cầu lưu commit và push GitHub, sau đó tạm dừng đ�
 
 ## Dự án và phạm vi đã chốt
 
-- Thư mục làm việc: `D:\app genlayer\TaskTrace` (đã đổi tên từ `New folder`).
-- GitHub dự kiến: `tanphung/tasktrace`; xem remote `origin` để xác nhận.
+- Thư mục làm việc: `D:\app genlayer\VeriStep` (đã đổi tên từ `New folder`).
+- GitHub dự kiến: `tanphung/veristep`; xem remote `origin` để xác nhận.
 - Track dự kiến: Future of Work. Chưa nộp portal, chưa được team chấp nhận.
 - A trích xuất từ nguồn, B làm báo cáo từ A; phân biệt lỗi bắt nguồn ở A và lỗi mới ở B. B chỉ có trách nhiệm đối chiếu nguồn khi nghĩa vụ đó đã được chấp nhận trước.
 - Nguồn là tài liệu tham chiếu được các bên thống nhất, không phải oracle xác nhận sự thật ngoài đời.
@@ -108,7 +152,7 @@ Người dùng yêu cầu lưu commit và push GitHub, sau đó tạm dừng đ�
 
 ## Trạng thái đã có bằng chứng
 
-1. Contract `contracts/tasktrace.py` đã qua lint ở phiên xây dựng; giữ runner hash hiện tại. Không sửa contract trong bước lưu GitHub.
+1. Contract `contracts/veristep.py` đã qua lint ở phiên xây dựng; giữ runner hash hiện tại. Không sửa contract trong bước lưu GitHub.
 2. 56 direct/adversarial tests đã pass; báo cáo `reports/direct-tests.xml`. LLM trong các test này là mock có kiểm soát, không được nói là 56 lần AI thực tế thành công.
 3. Hai unit tests cho receipt decoder đã pass. Receipt của Studio chứa cả validator idle có ERROR; chỉ chọn đúng leader receipt, đồng thời yêu cầu lifecycle FINALIZED và execution thành công. Không đổi sang chấp nhận FINALIZED đơn thuần.
 4. StudioNet chain `61999` đã deploy contract `0xebF38AD46a3C3D4728D84E0BF3EBD842Edab4802`, kiểm tra schema/config và hoàn thành create, accept A/B, submit A/B, request review cho case đầu.
@@ -128,7 +172,7 @@ Source SHA-256: `4606d0387360f0b4c0613a8188221def59225cdc0155e2b502af1b0dc2633f5
 2. Đọc raw receipt lỗi và contract prompt/parser. Bổ sung hướng dẫn JSON/citation cụ thể hoặc cơ chế sửa output có giới hạn sau khi rà soát thiết kế. Tuyệt đối không bỏ yêu cầu dẫn chứng cả nguồn và sản phẩm, không bỏ validator độc lập, không chấp nhận lỗi thành verdict.
 3. Thêm regression tests cho lỗi thực tế này; chạy lại GenVM lint, direct và adversarial tests. Giữ nguyên lịch sử lần chạy thất bại.
 4. Nếu source thay đổi hoặc cần bộ ví mới, lưu toàn bộ `reports/studionet` cũ vào thư mục archive có tên/hash riêng đã kiểm tra đường dẫn, rồi khởi tạo lần chạy mới. Không ghi đè receipt cũ. Runner bảo vệ source hash, network, chain và ví để không vô tình dùng lại deployment sai. Không gửi lại giao dịch có trạng thái chưa rõ chỉ vì hết thời gian chờ.
-5. Chạy ba ca cốt lõi thực tế (lỗi A, lỗi B, không lỗi), sau đó các ca còn lại và lặp có giới hạn. Mặc định runner chọn ba ca cốt lõi, một lượt; `TASKTRACE_REPETITIONS` chỉ nhận 1–3, `TASKTRACE_CASES` chọn ID trong fixtures. Lưu cả các lần thất bại, kiểm tra outcome và bảo toàn tiền. Runner hiện chưa kiểm chứng claim/payout.
+5. Chạy ba ca cốt lõi thực tế (lỗi A, lỗi B, không lỗi), sau đó các ca còn lại và lặp có giới hạn. Mặc định runner chọn ba ca cốt lõi, một lượt; `VERISTEP_REPETITIONS` chỉ nhận 1–3, `VERISTEP_CASES` chọn ID trong fixtures. Lưu cả các lần thất bại, kiểm tra outcome và bảo toàn tiền. Runner hiện chưa kiểm chứng claim/payout.
 6. Hoàn thiện luồng agent, wallet, tạo job, nhận việc/nộp artifact, yêu cầu review, dẫn chứng đầy đủ, timeout và claim. UI chỉ render state/receipt thật; MESSAGE_EMITTED không được hiện thành PAYMENT_CONFIRMED. Bổ sung frontend tests và E2E, kiểm tra desktop/mobile.
 7. Sau khi tất cả gates đạt, báo kết quả cho người dùng và xin xác nhận triển khai Bradbury theo `AGENTS.md`. Khi có xác nhận mới kiểm tra chain/account/gas và deploy. Dùng tài khoản test/giới hạn tiền, kiểm tra cả transfer/child message trước khi khẳng định payout.
 8. Hoàn thiện website công khai, README/submission, video/demo và bằng chứng test. Xác nhận GitHub đúng tài khoản liên kết portal, kiểm tra lại yêu cầu/hạn nộp hiện hành trước khi nộp. Không tự nhận dự án được chấp nhận hoặc chắc chắn đạt giải.
@@ -138,19 +182,19 @@ Source SHA-256: `4606d0387360f0b4c0613a8188221def59225cdc0155e2b502af1b0dc2633f5
 - `.env` chứa ví đã được người dùng cấp; chỉ giữ tại máy. Không đọc ra log, chat, source, báo cáo, bundle hoặc GitHub.
 - `.secrets/studionet.json` là các ví riêng cho StudioNet. File không được push; giữ thư mục gốc để tiếp tục run cũ. Clone repo không khôi phục được các khóa này.
 - GitHub CLI đang đăng nhập `tanphung`; dùng keyring, không viết token vào remote URL.
-- Vercel project chính: `vandas/tasktrace-genlayer`; alias production ghi ở mốc đầu tài liệu. `.vercel/` chỉ chứa liên kết local và bị ignore. Sites project cũ vẫn được ghi trong `.openai/hosting.json` để bảo toàn lịch sử triển khai; không dùng URL đó trong hồ sơ nộp.
+- Vercel project chính: `vandas/veristep-genlayer`; alias production ghi ở mốc đầu tài liệu. `.vercel/` chỉ chứa liên kết local và bị ignore. Sites project cũ vẫn được ghi trong `.openai/hosting.json` để bảo toàn lịch sử triển khai; không dùng URL đó trong hồ sơ nộp.
 - Mỗi lần commit: kiểm tra staged files, chạy `npm run check:secrets`, rồi kiểm tra lại committed tree. Đây là guard hỗ trợ, vẫn phải review nội dung trước public push.
 
 ## Lệnh kiểm tra nhanh trên máy hiện tại
 
 ```powershell
-Set-Location 'D:\app genlayer\TaskTrace'
+Set-Location 'D:\app genlayer\VeriStep'
 git status --short
 npm test
 npm run build
 npm audit
 $env:GENVM_VERSION = 'v0.2.12'
-.venv/Scripts/genvm-lint.exe check contracts/tasktrace.py --json
+.venv/Scripts/genvm-lint.exe check contracts/veristep.py --json
 .venv/Scripts/python.exe -m pytest tests/direct tests/adversarial -q
 ```
 

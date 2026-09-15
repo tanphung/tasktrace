@@ -81,7 +81,7 @@ class ControlledHost(IHost):
 
 
 async def main():
-    source = (root / "contracts/tasktrace_v2.py").read_bytes()
+    source = (root / "contracts/veristep.py").read_bytes()
     probe = b'''
 _probe_target = Address("0x" + "44" * 20)
 _probe_call = gl.evm.MethodEncoder("released", (u256,), u256).encode_call((u256(7),))
@@ -89,7 +89,7 @@ _probe_result = _evm_read_exact(_probe_target, _probe_call)
 assert int.from_bytes(_probe_result, "big") == 123, "native read bytes mismatch"
 _probe_send = gl.evm.MethodEncoder("fund", (u256,), type(None)).encode_call((u256(7),))
 _evm_send_exact(_probe_target, _probe_send, 123)
-print("TASKTRACE_NATIVE_EVM_ABI_PROBE_OK")
+print("VERISTEP_NATIVE_EVM_ABI_PROBE_OK")
 '''
     if args.web_url:
         assert args.web_url.startswith("http://127.0.0.1:"), "local fixture only"
@@ -100,9 +100,9 @@ def _probe_request():
             "has_url": hasattr(response, "url"), "has_history": hasattr(response, "history")}
 def _probe_capabilities(self):
     result = gl.eq_principle.strict_eq(_probe_request)
-    print("TASKTRACE_NATIVE_WEB_RESPONSE=" + json.dumps(result, sort_keys=True))
+    print("VERISTEP_NATIVE_WEB_RESPONSE=" + json.dumps(result, sort_keys=True))
     return json.dumps(result)
-TaskTraceV2.get_capabilities = gl.public.view(_probe_capabilities)
+VeriStep.get_capabilities = gl.public.view(_probe_capabilities)
 ''' % args.web_url).encode()
     addr = Address("0x" + "11" * 20)
     payload = calldata.encode({
@@ -112,7 +112,7 @@ TaskTraceV2.get_capabilities = gl.public.view(_probe_capabilities)
         "code": list(source + probe),
         "calldata": list(calldata.encode({"method": "get_capabilities", "args": []})),
     })
-    with tempfile.TemporaryDirectory(prefix="tasktrace-native-") as temp:
+    with tempfile.TemporaryDirectory(prefix="veristep-native-") as temp:
         socket_path = str(Path(temp) / "host.sock")
         listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         listener.bind(socket_path)
@@ -139,11 +139,11 @@ TaskTraceV2.get_capabilities = gl.public.view(_probe_capabilities)
             (root / f"reports/{name}.json").write_text(json.dumps(report, indent=2) + "\n")
             assert process.returncode == 0 and result[0] == ResultCode.RETURN, report
             if args.web_url:
-                assert b"TASKTRACE_NATIVE_WEB_RESPONSE=" in output, report
+                assert b"VERISTEP_NATIVE_WEB_RESPONSE=" in output, report
                 assert len(host.nondet_results) == 1 and not host.sends, report
                 print("PASS: real GenVM web observation captured; no provenance approval implied.")
                 return
-            assert b"TASKTRACE_NATIVE_EVM_ABI_PROBE_OK" in output, report
+            assert b"VERISTEP_NATIVE_EVM_ABI_PROBE_OK" in output, report
             assert len(host.reads) == len(host.sends) == 1, report
             assert host.reads[0]["address"] == host.sends[0]["address"] == "44" * 20, report
             assert int(host.sends[0]["value"], 16) == 123, report

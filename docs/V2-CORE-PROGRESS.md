@@ -10,8 +10,8 @@
 - A fresh project key was verified against the model endpoint without exposing its value. The real OpenAI A/B smoke then passed on `gpt-5.6-luna` with `store:false`, Structured Outputs and reasoning disabled for bounded cost. A used 132 input/50 output tokens and B used 129 input/50 output tokens; total recorded spend is 172,200 nano-USD (0.0001722 USD). Both artifacts preserved the source's final provenance exception. The earlier HTTP 401 request ID remains non-retriable with a conservative 1,374,200 nano-USD reserve, leaving 798,453,600 nano-USD available under the approved cap. No key value is logged or committed; see `reports/openai-worker-smoke.json`.
 - Bradbury V2, the remote Cloudflare worker and the V2 frontend are **not deployed**. Per owner policy, the native IC -> router -> recipient -> IC receipt round trip must be proved only after all predeployment results are reviewed and the owner explicitly confirms deployment.
 
-Current source is `contracts/tasktrace_v2.py`, not the former draft-only
-`tasktrace_v2_core.py`. The IC now exposes the complete funded lifecycle,
+Current source is `contracts/veristep.py`, not the former draft-only
+`veristep_core.py`. The IC now exposes the complete funded lifecycle,
 independently acquires all committed GitHub bytes in leader and validator runs,
 stores the full structured report, applies deterministic deadline/settlement
 rules and confirms only an exact released router receipt. The production v1.1
@@ -19,7 +19,7 @@ deployment remains unchanged. V2 has not been released to Bradbury or selected
 by the public frontend; a semantic-only copy is deployed to gasless StudioNet
 for committee verification.
 
-The minimal Solidity router is `contracts/TaskTraceReceiptRouter.sol`; adversarial
+The minimal Solidity router is `contracts/VeriStepReceiptRouter.sol`; adversarial
 recipient contracts live only under `tests/evm/`. Latest component gates are:
 
 - GenVM lint: 3 checks and ABI validation pass; 3 views and 9 writes.
@@ -34,7 +34,7 @@ recipient contracts live only under `tests/evm/`. Latest component gates are:
 - Chain `61999`; contract `0x41BcdFB280BD26939cb6956B55ddA7e85b4567c9`.
 - Deploy transaction `0xea5700856225a70267eb8d4dce92e0b9c1ddb2223d35685a4e971b449a4f2cef`
   finalized with successful execution. Deployed schema has 3 views and 9 writes;
-  `get_capabilities` returns `tasktrace-2.0-rc` and the deliberately disabled
+  `get_capabilities` returns `veristep-2.0-rc` and the deliberately disabled
   router address.
 - Exact source SHA-256 is
   `3133e10bf159d16a9fa49a1ec93f70cd02d1396e6f37983ed75534c5b2c3768e`.
@@ -76,7 +76,7 @@ new-contract deployment approval. Wallet permission is not a waiver of tests.
 
 ## Implemented in Intelligent Contract source
 
-`contracts/tasktrace_v2_core.py` used the original concrete runner hash. Its only
+`contracts/veristep_core.py` used the original concrete runner hash. Its only
 write entry point stores immutable **unfunded** draft terms with authenticated
 client, distinct workers, chain/contract/deal domain and canonical terms hash.
 It explicitly reports funding, external review and settlement as disabled.

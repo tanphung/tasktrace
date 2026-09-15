@@ -7,14 +7,14 @@ import {injected} from "./transactions";
 import type {V2Deal} from "./v2-types";
 
 interface WorkerState {run_id:string;state:"ACTIVE"|"COMPLETE"|"ERROR"|"CANCELLED";stage:string;detail:string;updated_at:number}
-const workerUrl=String(import.meta.env.VITE_TASKTRACE_WORKER_URL??"").replace(/\/$/,"");
+const workerUrl=String(import.meta.env.VITE_VERISTEP_WORKER_URL??"").replace(/\/$/,"");
 
 function authMessage(input:{address:string;nonce:string;expiresAt:number;chainId:number;contract:string;dealId:string;termsHash:string}){
-  return ["TaskTrace hosted worker authorization v1",`address:${input.address.toLowerCase()}`,`nonce:${input.nonce}`,`expires_at:${input.expiresAt}`,`chain_id:${input.chainId}`,`contract:${input.contract.toLowerCase()}`,`deal_id:${input.dealId}`,`terms_hash:${input.termsHash}`,"scope:start_or_resume_agent_ab"].join("\n");
+  return ["VeriStep hosted worker authorization v1",`address:${input.address.toLowerCase()}`,`nonce:${input.nonce}`,`expires_at:${input.expiresAt}`,`chain_id:${input.chainId}`,`contract:${input.contract.toLowerCase()}`,`deal_id:${input.dealId}`,`terms_hash:${input.termsHash}`,"scope:start_or_resume_agent_ab"].join("\n");
 }
 
 export function V2Worker({deal,account}:{deal:V2Deal;account?:Address}){
-  const key=`tasktrace:v2-worker:${chain.id}:${deal.contract.toLowerCase()}:${deal.deal_id}`;
+  const key=`veristep:v2-worker:${chain.id}:${deal.contract.toLowerCase()}:${deal.deal_id}`;
   const [runId,setRunId]=useState(()=>localStorage.getItem(key)??""),[state,setState]=useState<WorkerState>(),[busy,setBusy]=useState(false),[error,setError]=useState("");
   const client=account?.toLowerCase()===deal.manifest.client.toLowerCase();
   const load=useCallback(async()=>{if(!workerUrl||!runId)return;try{const response=await fetch(`${workerUrl}/api/worker-runs/${encodeURIComponent(runId)}`,{cache:"no-store"}),data=await response.json() as {run?:WorkerState;error?:string};if(!response.ok||!data.run)throw new Error(data.error??"Hosted run unavailable");setState(data.run);setError("");}catch(cause){setError(cause instanceof Error?cause.message:"Hosted worker status unavailable");}},[runId]);

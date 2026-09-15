@@ -90,7 +90,7 @@ export interface V2Assessment {
 }
 
 export interface V2Report {
-  schema_version: "tasktrace-report-2";
+  schema_version: "veristep-report-2";
   chain_domain: string;
   contract: string;
   job_id: string;
@@ -120,10 +120,9 @@ export interface V2SettlementLeg {
   amount: string;
   kind: "PAYOUT" | "REFUND" | "BOND_RETURN";
   outcome: V2Outcome;
-  state: "ELIGIBLE" | "ROUTED" | "CONFIRMED";
+  state: "ELIGIBLE" | "DISPATCHED_UNVERIFIED";
   receipt_id: string;
   routed_at?: number;
-  confirmed_at?: number;
 }
 
 export interface V2Deal {
@@ -135,7 +134,7 @@ export interface V2Deal {
   terms_hash: string;
   accepted: {A: boolean; B: boolean};
   manifest: {
-    version: "tasktrace-2.0-rc";
+    version: "veristep-2.0-rc";
     chain_domain: string;
     contract: string;
     router: string;

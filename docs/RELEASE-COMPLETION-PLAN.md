@@ -1,4 +1,4 @@
-# TaskTrace — kế hoạch hoàn thiện để người dùng kiểm tra và tự nộp
+# VeriStep — kế hoạch hoàn thiện để người dùng kiểm tra và tự nộp
 
 Ngày lập: 13/09/2026. Baseline: nhánh `feat/ic-v2-preflight`, commit `19f52ee`.
 Trạng thái: kế hoạch thực hiện, chưa phải chứng nhận hoàn thành hoặc cho phép deploy V2.
@@ -7,11 +7,11 @@ Tài liệu này là đầu mối cho thứ tự công việc còn lại. Nó th
 
 ## 1. Sản phẩm và tiêu chí nộp
 
-Giữ tên TaskTrace, track Future of Work. Một khách hàng thuê hai worker: A trích xuất từ tài liệu nguồn, B viết từ đầu ra A. GenLayer kiểm tra từng nghĩa vụ đã được chấp nhận và quyết định trách nhiệm, quyền nhận tiền/refund theo điều khoản đã funding.
+Giữ tên VeriStep, track Future of Work. Một khách hàng thuê hai worker: A trích xuất từ tài liệu nguồn, B viết từ đầu ra A. GenLayer kiểm tra từng nghĩa vụ đã được chấp nhận và quyết định trách nhiệm, quyền nhận tiền/refund theo điều khoản đã funding.
 
 Điểm trình diễn chính: hai báo cáo có cùng kết luận sai nhưng handoff khác nhau dẫn tới trách nhiệm khác nhau. Thêm trường hợp B có nghĩa vụ kiểm tra nguồn để thể hiện trách nhiệm thay đổi theo điều khoản. Không tuyên bố ý tưởng độc quyền hoặc bảo đảm được panel chấp thuận.
 
-Phân biệt yêu cầu form với tiêu chuẩn chất lượng: form có repository công khai, thông tin dự án, track, logo và website trước review; các yêu cầu IC chặt chẽ, agent thật và UX bên dưới là tiêu chuẩn đã chốt cho TaskTrace. Chưa thấy rubric chấm điểm có trọng số được portal công bố trong các lần kiểm tra.
+Phân biệt yêu cầu form với tiêu chuẩn chất lượng: form có repository công khai, thông tin dự án, track, logo và website trước review; các yêu cầu IC chặt chẽ, agent thật và UX bên dưới là tiêu chuẩn đã chốt cho VeriStep. Chưa thấy rubric chấm điểm có trọng số được portal công bố trong các lần kiểm tra.
 
 Form đã kiểm tra trong phiên làm việc trước: tên tối đa 120 ký tự; one-liner 180; description 1000; expected outcome 500; logo PNG/JPEG/WebP 128–2048 px, tối đa 2 MB. YouTube và contract links là trường tùy chọn của form. Với sản phẩm này vẫn cung cấp link contract đã xác minh. Repository phải thuộc GitHub liên kết với Portal; đăng nhập gh ở máy không chứng minh liên kết Portal. Người dùng tự quay video, tự kiểm tra cuối và tự submit.
 
@@ -58,7 +58,7 @@ Receipt chỉ được IC xác nhận khi khớp chain, router, source contract,
 - OpenAI Responses API với Structured Outputs, `store:false`, model pin `gpt-5.6-luna`. Giá dùng cho bộ chặn ngân sách là 0,20 USD/triệu input token và 1,20 USD/triệu output token; thay đổi model hoặc bảng giá phải là thay đổi cấu hình có review, không được fallback sang model đắt hơn. Dùng output schema cho sản phẩm công việc, không dùng schema này làm verdict.
 - A đọc source và nghĩa vụ A. B đọc đúng artifact A đã finalized cùng nghĩa vụ B; B chỉ nhận source khi nghĩa vụ kiểm tra nguồn yêu cầu. Hai vai trò có hai ví worker riêng; cùng operator thì ghi đúng là cùng operator.
 - Ví từ `.env` cục bộ chỉ dùng theo phạm vi test GEN đã được cho phép. Worker hosted dùng ví riêng, hạn mức nhỏ; không đưa funded deployer key lên hosting.
-- Artifact xuất bản vào repository evidence công khai chuyên dụng `tanphung/tasktrace-evidence` (mục tiêu đề xuất, chưa tạo), bằng credential giới hạn repository. Người tạo job phải biết evidence sẽ công khai. Chỉ public source được hỗ trợ trong bản này. Worker ghi commit bất biến, lưu model ID, prompt version, input/output hashes, thời điểm và tx hashes. GitHub credential trên máy không tự trở thành credential hosting.
+- Artifact xuất bản vào repository evidence công khai chuyên dụng `tanphung/veristep-evidence` (mục tiêu đề xuất, chưa tạo), bằng credential giới hạn repository. Người tạo job phải biết evidence sẽ công khai. Chỉ public source được hỗ trợ trong bản này. Worker ghi commit bất biến, lưu model ID, prompt version, input/output hashes, thời điểm và tx hashes. GitHub credential trên máy không tự trở thành credential hosting.
 - Worker journal: QUEUED → A_RUNNING → A_SUBMITTED → A_FINALIZED → B_RUNNING → B_SUBMITTED → B_FINALIZED → REVIEW_PENDING → REVIEW_FINALIZED → SETTLEMENT_PENDING → COMPLETE; các trạng thái lỗi/chờ phải có reason. Worker journal là tiến độ vận hành; trạng thái contract vẫn là nguồn quyết định.
 - Queue bền vững dùng Workflows với unique key `(chain, contract, deal, role, revision)` lưu trong D1 và lease/conditional updates để chống hai instance chạy trùng. Lưu output trước publish, commit trước submit, transaction intent/hash trước polling. Sau crash đối chiếu chain, nonce và artifact đã lưu trước khi tiếp tục; không tự ký lại giao dịch có kết quả chưa rõ.
 - API tối thiểu: POST `/api/worker-runs`, GET `/api/worker-runs/:id`, POST `/api/worker-runs/:id/resume`, POST `/api/worker-runs/:id/cancel`. Request bắt đầu/resume phải có wallet authorization nonce một lần, expiry, chain/contract/deal/terms hash; xác minh đúng client và job đủ điều kiện. Cancel chỉ ngừng bước chưa gửi, không đảo giao dịch on-chain.

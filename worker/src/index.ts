@@ -3,7 +3,7 @@ import {budgetSnapshot} from "./budget";
 import {assertHostedWorkers, readFinalDeal} from "./genlayer";
 import {canonicalAuthMessage, MAX_ACTIVE_RUNS, MAX_DAILY_RUNS} from "./policy";
 import type {Env, RunParams} from "./types";
-export {TaskTraceWorkflow} from "./workflow";
+export {VeriStepWorkflow} from "./workflow";
 
 interface AuthBody {
   address: string;
@@ -76,7 +76,7 @@ async function startRun(env: Env, request: Request): Promise<Response> {
   ).bind(params.runId, params.client, params.chainId, params.contract, params.dealId, body.termsHash, MAX_ACTIVE_RUNS, params.client, MAX_DAILY_RUNS).run();
   if (inserted.meta.changes !== 1) throw new Error("Hosted worker quota is currently full");
   try {
-    await env.TASKTRACE_RUNNER.create({id: params.runId, params, retention: {successRetention: "3 days", errorRetention: "3 days"}, locationHint: "apac-se"});
+    await env.VERISTEP_RUNNER.create({id: params.runId, params, retention: {successRetention: "3 days", errorRetention: "3 days"}, locationHint: "apac-se"});
   } catch (error) {
     await env.DB.prepare("UPDATE worker_runs SET state = 'ERROR', detail = ?, updated_at = unixepoch() WHERE run_id = ?")
       .bind(`Workflow dispatch failed: ${error instanceof Error ? error.message.slice(0, 300) : "unknown"}`, params.runId).run();
@@ -91,7 +91,7 @@ async function manageRun(env: Env, request: Request, runId: string, command: "re
   await consumeAuthorization(env, body);
   const run = await env.DB.prepare("SELECT run_id, client, chain_id, contract, deal_id, terms_hash, state FROM worker_runs WHERE run_id = ?").bind(runId).first<{run_id: string; client: string; chain_id: number; contract: string; deal_id: string; terms_hash: string; state: string}>();
   if (!run || run.client !== body.address.toLowerCase() || run.chain_id !== body.chainId || run.contract !== body.contract.toLowerCase() || run.deal_id !== body.dealId || run.terms_hash !== body.termsHash) throw new Error("Run authorization domain mismatch");
-  const instance = await env.TASKTRACE_RUNNER.get(runId);
+  const instance = await env.VERISTEP_RUNNER.get(runId);
   if (command === "resume") {
     if (run.state !== "ERROR") throw new Error("Only an errored run can be resumed");
     await instance.restart();
@@ -109,7 +109,18 @@ export default {
     const url = new URL(request.url);
     if (request.method === "OPTIONS") return new Response(null, {status: 204, headers: {...headers(env, request), "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type"}});
     try {
-      if (request.method === "GET" && url.pathname === "/api/health") return json(env, request, {ok: true, budget: await budgetSnapshot(env.DB), model: env.OPENAI_WORKER_MODEL});
+      if (request.method === "GET" && url.pathname === "/api/health") return json(env, request, {
+        ok: true,
+        ready: Boolean(env.OPENAI_API_KEY && env.WORKER_A_PRIVATE_KEY && env.WORKER_B_PRIVATE_KEY && env.GITHUB_EVIDENCE_TOKEN),
+        dependencies: {
+          openai: Boolean(env.OPENAI_API_KEY),
+          workerWallets: Boolean(env.WORKER_A_PRIVATE_KEY && env.WORKER_B_PRIVATE_KEY),
+          githubEvidence: Boolean(env.GITHUB_EVIDENCE_TOKEN),
+        },
+        network: {chainId: Number(env.VERISTEP_CHAIN_ID), rpc: env.GENLAYER_RPC_URL, contract: env.VERISTEP_V2_CONTRACT},
+        budget: await budgetSnapshot(env.DB),
+        model: env.OPENAI_WORKER_MODEL,
+      });
       if (request.method === "GET" && url.pathname === "/api/worker-nonce") {
         const address = (url.searchParams.get("address") ?? "").toLowerCase();
         if (!ADDRESS.test(address)) throw new Error("Invalid wallet address");
@@ -123,7 +134,7 @@ export default {
       if (match && request.method === "GET" && !match[2]) {
         const run = await env.DB.prepare("SELECT run_id, client, chain_id, contract, deal_id, terms_hash, state, stage, detail, created_at, updated_at FROM worker_runs WHERE run_id = ?").bind(match[1]).first();
         if (!run) return json(env, request, {error: "Run not found"}, 404);
-        const workflow = await (await env.TASKTRACE_RUNNER.get(match[1])).status();
+        const workflow = await (await env.VERISTEP_RUNNER.get(match[1])).status();
         return json(env, request, {run, workflow});
       }
       if (match && request.method === "POST" && (match[2] === "resume" || match[2] === "cancel")) return await manageRun(env, request, match[1], match[2]);

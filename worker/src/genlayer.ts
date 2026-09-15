@@ -1,7 +1,7 @@
 import {createAccount, createClient} from "genlayer-js";
-import {testnetBradbury} from "genlayer-js/chains";
 import {TransactionHashVariant, type Address, type TransactionHash} from "genlayer-js/types";
 import type {AgentRole, Commitment, Env, RunParams, WorkerDeal} from "./types";
+import {STUDIO_NEXT_CHAIN_ID,studioNext} from "./network";
 
 type Client = ReturnType<typeof createClient>;
 
@@ -30,9 +30,10 @@ function executionName(receipt: unknown): string {
 export function agentClients(env: Env): Record<AgentRole, {account: ReturnType<typeof createAccount>; client: Client}> {
   const A = createAccount(env.WORKER_A_PRIVATE_KEY), B = createAccount(env.WORKER_B_PRIVATE_KEY);
   if (A.address.toLowerCase() === B.address.toLowerCase()) throw new Error("Worker A and B must use distinct keys");
+  const chain=studioNext(env.GENLAYER_RPC_URL);
   return {
-    A: {account: A, client: createClient({chain: testnetBradbury, endpoint: env.GENLAYER_RPC_URL, account: A})},
-    B: {account: B, client: createClient({chain: testnetBradbury, endpoint: env.GENLAYER_RPC_URL, account: B})},
+    A: {account: A, client: createClient({chain, endpoint: env.GENLAYER_RPC_URL, account: A})},
+    B: {account: B, client: createClient({chain, endpoint: env.GENLAYER_RPC_URL, account: B})},
   };
 }
 
@@ -47,8 +48,8 @@ function validateDeal(value: unknown, params: RunParams): WorkerDeal {
 }
 
 export async function readFinalDeal(env: Env, params: RunParams): Promise<WorkerDeal> {
-  if (Number(env.TASKTRACE_CHAIN_ID) !== params.chainId || env.TASKTRACE_V2_CONTRACT.toLowerCase() !== params.contract.toLowerCase() || params.chainId !== testnetBradbury.id) throw new Error("Hosted deployment guard mismatch");
-  const client = createClient({chain: testnetBradbury, endpoint: env.GENLAYER_RPC_URL});
+  if (Number(env.VERISTEP_CHAIN_ID) !== params.chainId || env.VERISTEP_V2_CONTRACT.toLowerCase() !== params.contract.toLowerCase() || params.chainId !== STUDIO_NEXT_CHAIN_ID) throw new Error("Hosted deployment guard mismatch");
+  const client = createClient({chain:studioNext(env.GENLAYER_RPC_URL), endpoint: env.GENLAYER_RPC_URL});
   const raw = await client.readContract({address: asAddress(params.contract, "contract"), functionName: "get_terms", args: [params.dealId], transactionHashVariant: TransactionHashVariant.LATEST_FINAL});
   if (typeof raw !== "string") throw new Error("Unexpected finalized contract response");
   return validateDeal(JSON.parse(raw), params);
@@ -56,9 +57,14 @@ export async function readFinalDeal(env: Env, params: RunParams): Promise<Worker
 
 export async function writeAgentAction(env: Env, params: RunParams, role: AgentRole, action: "accept_work" | "submit_artifact", args: unknown[], value: bigint): Promise<string> {
   const clients = agentClients(env);
-  return journaledTransaction(env.DB, params.runId, `${role}:${action}`, async () => clients[role].client.writeContract({
-    address: asAddress(params.contract, "contract"), functionName: action, args: args as never[], value, leaderOnly: false, consensusMaxRotations: 3,
-  }) as Promise<string>);
+  return journaledTransaction(env.DB, params.runId, `${role}:${action}`, async () => {
+    const write={address:asAddress(params.contract,"contract"),functionName:action,args:args as never[],value};
+    const estimate=await clients[role].client.estimateTransactionFeesForWrite(write);
+    return clients[role].client.writeContract({
+      ...write,
+      fees:{distribution:estimate.distribution,...(estimate.messageAllocations?{messageAllocations:estimate.messageAllocations}:{}),feeValue:estimate.feeValue},
+    }) as Promise<string>;
+  });
 }
 
 export async function journaledTransaction(db: D1Database, runId: string, action: string, submit: () => Promise<string>): Promise<string> {
