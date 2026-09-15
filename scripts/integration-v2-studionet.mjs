@@ -74,9 +74,40 @@ const fixtures = [
     expected: { A: "SATISFIED", B: "VIOLATED" },
   },
 ];
+const requestedCaseIds = (process.env.VERISTEP_STUDIO_NEXT_CASES ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const activeFixtures = requestedCaseIds.length === 0
+  ? fixtures
+  : fixtures.filter((fixture) => requestedCaseIds.includes(fixture.id));
+assert.equal(activeFixtures.length, requestedCaseIds.length || fixtures.length, "Unknown Studio Next case selector");
 const exists = (path) => access(path).then(() => true, () => false);
 const stringify = (value) => JSON.stringify(value, (_, item) => typeof item === "bigint" ? item.toString() : item, 2);
 const sleep = (milliseconds) => new Promise((done) => setTimeout(done, milliseconds));
+const decodeResult = (value) => {
+  if (typeof value !== "string") return null;
+  try {
+    const decoded = Buffer.from(value, "base64").toString("utf8");
+    return /^[\x20-\x7E]+$/.test(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
+};
+const publicError = (error) => {
+  const receipt = error?.cause?.data?.receipt;
+  return {
+    name: error?.name ?? "Error",
+    message: error?.details ?? error?.shortMessage ?? error?.message ?? "unknown error",
+    code: error?.code ?? error?.cause?.code ?? null,
+    executionResult: receipt?.execution_result ?? null,
+    contractResult: decodeResult(receipt?.result),
+  };
+};
+process.on("uncaughtException", (error) => {
+  console.error(JSON.stringify({ fatal: publicError(error) }));
+  process.exitCode = 1;
+});
 function isTransientNetworkError(error) {
   const message = [error?.details, error?.shortMessage, error?.message, error?.cause?.message]
     .filter(Boolean)
@@ -383,14 +414,38 @@ manifest.configVerified = true;
 manifest.deployedSourceVerified = true;
 await save();
 const readDeal = async (dealId) => JSON.parse(await clients.client.readContract({ address, functionName: "get_terms", args: [dealId] }));
-const write = (name, role, functionName, args, value = 0n, feeOptions = {}) => transaction(name, clients[role], async () => {
+const reviveNumericStrings = (value) => {
+  if (Array.isArray(value)) return value.map(reviveNumericStrings);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reviveNumericStrings(item)]));
+  }
+  return typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : value;
+};
+const write = (name, role, functionName, args, value = 0n, feeOptions = {}, fallbackFeeProfileName) => transaction(name, clients[role], async () => {
   const call = { address, functionName, args, value };
-  const estimate = await clients[role].estimateTransactionFeesForWrite({ ...call, ...feeOptions });
+  let estimate;
+  try {
+    estimate = await clients[role].estimateTransactionFeesForWrite({ ...call, ...feeOptions });
+  } catch (error) {
+    const fallback = fallbackFeeProfileName ? manifest.feeProfiles?.[fallbackFeeProfileName] : null;
+    if (!fallback) throw error;
+    estimate = {
+      feeValue: BigInt(fallback.feeValue),
+      distribution: reviveNumericStrings(fallback.distribution),
+      ...(fallback.messageAllocations ? { messageAllocations: reviveNumericStrings(fallback.messageAllocations) } : {}),
+    };
+    console.warn(JSON.stringify({
+      step: name,
+      feeProfileFallback: fallbackFeeProfileName,
+      reason: publicError(error),
+    }));
+  }
   manifest.feeProfiles ??= {};
   manifest.feeProfiles[name] = {
     feeValue: String(estimate.feeValue),
     distribution: JSON.parse(stringify(estimate.distribution)),
     ...(estimate.messageAllocations ? { messageAllocations: JSON.parse(stringify(estimate.messageAllocations)) } : {}),
+    ...(fallbackFeeProfileName ? { fallbackCandidate: fallbackFeeProfileName } : {}),
   };
   await save();
   return clients[role].writeContract({
@@ -429,15 +484,30 @@ async function loadCommitments(paths) {
   return commitments;
 }
 
-for (const fixture of fixtures) {
+for (const fixture of activeFixtures) {
   const commitments = await loadCommitments(fixture.paths);
   let recovery = 0;
+  const terminalResolveFailures = new Set([
+    "FINALIZED_ERROR",
+    "UNDETERMINED",
+    "CANCELED",
+    "LEADER_TIMEOUT",
+    "VALIDATORS_TIMEOUT",
+  ]);
   while (true) {
     const candidate = recovery === 0 ? fixture.id : `${fixture.id}-recovery-${recovery}`;
+    const nextCandidate = `${fixture.id}-recovery-${recovery + 1}`;
     const failedResolve = manifest.steps[`${candidate}-resolve-review`];
-    const rejectedRetry = manifest.steps[`${candidate}-resolve-review-retry-1`];
-    if (!(failedResolve?.phase === "FINALIZED_ERROR" && rejectedRetry?.phase === "REJECTED_BEFORE_HASH")) break;
-    recovery += 1;
+    const retryResolve = manifest.steps[`${candidate}-resolve-review-retry-1`];
+    if (manifest.steps[`${nextCandidate}-create`]) {
+      recovery += 1;
+      continue;
+    }
+    if (terminalResolveFailures.has(failedResolve?.phase) && terminalResolveFailures.has(retryResolve?.phase)) {
+      recovery += 1;
+      continue;
+    }
+    break;
   }
   const prefix = recovery === 0 ? fixture.id : `${fixture.id}-recovery-${recovery}`;
   const dealId = recovery === 0
@@ -457,7 +527,15 @@ for (const fixture of fixtures) {
   const resolveBase = `${prefix}-resolve-review`;
   const priorResolve = manifest.steps[resolveBase];
   const resolveName = priorResolve?.finalized && ["UNDETERMINED","FINALIZED_ERROR"].includes(priorResolve.phase) ? `${resolveBase}-retry-1` : resolveBase;
-  await write(resolveName, "client", "resolve_review", [dealId]);
+  const previousPrefix = recovery === 0
+    ? undefined
+    : recovery === 1
+      ? fixture.id
+      : `${fixture.id}-recovery-${recovery - 1}`;
+  const resolveFeeFallback = resolveName === resolveBase
+    ? previousPrefix ? `${previousPrefix}-resolve-review` : undefined
+    : resolveBase;
+  await write(resolveName, "client", "resolve_review", [dealId], 0n, {}, resolveFeeFallback);
   deal = await readDeal(dealId);
   assert.equal(deal.status, "SETTLEMENT_PENDING", `${fixture.id} did not reach a deterministic settlement decision`);
   const semantic = Object.fromEntries(
@@ -556,10 +634,15 @@ for (const testCase of negativeCases) {
   await save();
 }
 
-manifest.completedAt = new Date().toISOString();
+const semanticCases = fixtures.filter((fixture) => manifest.cases[fixture.id]?.passed).length;
+const allSemanticCasesPassed = semanticCases === fixtures.length;
+if (allSemanticCasesPassed) manifest.completedAt = new Date().toISOString();
+else delete manifest.completedAt;
 manifest.result = {
-  passed: true,
-  semanticCases: fixtures.length,
+  passed: allSemanticCasesPassed,
+  partial: !allSemanticCasesPassed,
+  semanticCases,
+  expectedSemanticCases: fixtures.length,
   rejectionCases: negativeCases.length,
   cases: Object.keys(manifest.cases).length,
   contract: address,

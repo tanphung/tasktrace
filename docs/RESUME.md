@@ -30,17 +30,29 @@ không đổi.
   `0x878e79c309a1485fab7dbb284fd159d7ae5de5424867fe6f5ed6c4f84c715bfa`
   lỗi do `HTTP_UNAVAILABLE`/`MAJORITY_DISAGREE`, retry hết cửa sổ và không có
   hash. Giữ nguyên bằng chứng lỗi.
-- Recovery deal `v2-studio-a-fault-r1-358323c` đã đạt `FINALIZED_SUCCESS` cho
-  create, fund, accept A/B, submit A/B và request review. Estimate resolve bị
-  từ chối trước hash với `CITATION_NOT_UNIQUE`; không retry mù. Điểm tiếp tục là
-  chẩn đoán consensus/citation của recovery deal hoặc chờ timeout an toàn, rồi
-  chạy `b-fault` lần đầu. Runner chọn prefix recovery mới từ manifest và không
-  chạy lại step đã final.
+- Recovery A-fault `r1` và `r2` đều đã hoàn tất create → request review nhưng cả
+  hai lượt resolve có hash của mỗi recovery đều kết thúc `UNDETERMINED`. Hash
+  mới nhất của r2 là resolve
+  `0xfa6074f7c2b632699ec0832b99e404efc34abb7506ddb4221e151d7792620951`
+  và retry-1
+  `0x61f3a90ef96f4f2dee5cb4de905c6b6a0e888bc1f14a0221005780e3ba00bfd2`.
+  Receipt cho thấy validator `HTTP_UNAVAILABLE`/disagree; không gửi lại các hash
+  này và chưa tạo r3 khi hạ tầng AI đang bất ổn.
+- Case `b-fault` gốc đã hoàn tất create → request review. Resolve
+  `0xbf303857a029bbe1c55d0861b1913f49e24319a898e02e997ba892766b4f6c58`
+  và retry-1
+  `0xd44b5a1229426af1634f54b4729388461281c27271f4ecc9cbb6d9356434259e`
+  đều `UNDETERMINED`; chưa tạo recovery trong cùng đợt outage.
+- Runner hỗ trợ `VERISTEP_STUDIO_NEXT_CASES` để tiếp tục từng case mà không ghi
+  sai gate tổng, chọn recovery dựa trên manifest, dùng nonce guard, và chỉ dùng
+  fee profile đã estimate thành công của cùng lời gọi làm fallback khi RPC
+  estimate tạm lỗi. Mọi step có hash/finality đều được no-op khi chạy lại.
 - Video và thao tác Portal do người dùng tự thực hiện sau khi dApp hoàn chỉnh.
 
-Thứ tự còn lại: hoàn thiện hosted worker secret/health và một hosted A/B case;
-hoàn tất ba case Studio Next từ checkpoint; hợp nhất fee profile; sửa copy/UI
-Bradbury còn sót; publish Vercel; cập nhật README/submission. Trước mọi write
+Thứ tự còn lại: hợp nhất fee profile; sửa copy/UI Bradbury còn sót; publish
+Vercel; cập nhật README/submission; sau đó thử recovery Studio Next khi validator
+ổn định. Hosted worker còn cần repo-scoped GitHub token để health ready và chạy
+một hosted A/B case. Trước mọi write
 live, đọc manifest và quan sát hash hiện có; không tự resend trạng thái
 `UNKNOWN`, ambiguous hoặc đã finalized.
 
